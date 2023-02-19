@@ -1,0 +1,23 @@
+{
+    "name": "screeps-bot-screeps-nooby-typescript-code",
+    "version": "0.0.1",
+    "description": "A screeps AI for noobs running typescript",
+    "license": "MIT",
+    "keywords": [
+      "screeps",
+      "game-ai"
+    ],
+    "author": "rfsjim",
+    "bugs": {
+      "url": "https://github.com/rfsjim/Screeps-Nooby-Code/issues"
+    },
+    "homepage": "https://github.com/rfsjim/Screeps-Nooby-Code",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/rfsjim/Screeps-Nooby-Code.git"
+    },
+    "type": "commonjs",
+    "main": "src/main.js",
+    "screeps_bot": true,
+  }
+  
