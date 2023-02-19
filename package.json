@@ -22,6 +22,7 @@
   "dependencies": {
     "@types/screeps": "^3.3.0",
     "lodash": "^4.17.21",
+    "rollup": "^3.17.1",
     "typescript": "^4.9.5"
   },
   "devDependencies": {}
