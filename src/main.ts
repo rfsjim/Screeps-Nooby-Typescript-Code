@@ -5,6 +5,7 @@ import initRoom from "./init";
 // import role modules
 import roleHarvester from "./role.harvester";
 import roleUpgrader from "./role.upgrader";
+import roleBuilder from "./role.builder";
 
 module.exports.loop = function() {
 
@@ -14,6 +15,9 @@ module.exports.loop = function() {
     }
 
     // get current progress
+    for (var name in Game.rooms) {
+        console.log('Room "'+name+'" has '+Game.rooms[name].energyAvailable+' energy');
+    }
 
     // run tick logic
     for (var name in Game.creeps) {
@@ -23,6 +27,9 @@ module.exports.loop = function() {
         }
         if (creep.memory.role == 'upgrader') {
             roleUpgrader.run(creep);
+        }
+        if (creep.memory.role == 'builder') {
+            roleBuilder.run(creep);
         }   
     }
 }

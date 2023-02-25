@@ -6,5 +6,6 @@ declare global {
     }
     interface CreepMemory {
         role: string;
+        building: boolean;
     }
 }
