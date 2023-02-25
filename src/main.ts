@@ -2,6 +2,9 @@
 import clearMemory from "./helper";
 import initRoom from "./init";
 
+// import role modules
+import roleHarvester from "./role.harvester";
+
 module.exports.loop = function() {
 
     // make sure memory is initiated
@@ -12,5 +15,9 @@ module.exports.loop = function() {
     // get current progress
 
     // run tick logic
+    for (var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        roleHarvester.run(creep);
+    }
     
 }
