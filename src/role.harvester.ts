@@ -12,6 +12,6 @@ var roleHarvester = {
             }
         }
     }
-}
+};
 
 export default roleHarvester;
