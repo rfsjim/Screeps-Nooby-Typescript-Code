@@ -2,6 +2,7 @@ var _ = require('lodash'); // Lodash is a JavaScript library which provides util
 
 // required code
 require('./prototype.spawn'); // common code for all spawns
+require('./prototype.tower'); // common code for all towers
 
 // import modules
 import clearMemory from "./helper"; // local console helper functions
@@ -29,9 +30,6 @@ module.exports.loop = function() {
     }
     
     // get current progress
-    for (var name in Game.rooms) {
-        console.log('Room "'+name+'" has '+Game.rooms[name].energyAvailable+' energy'); 
-        }
     
     // run tick logic
     for (var name in Game.creeps) {
@@ -47,8 +45,14 @@ module.exports.loop = function() {
         }   
     }
     for (var name in Game.spawns) {
-        if (!Game.spawns[name].spawning) {
+        if (!Game.spawns[name].spawning && (Game.spawns[name].room.energyAvailable >= 
+                (BODYPART_COST['move'] + BODYPART_COST['carry'] + BODYPART_COST['work']))) {
             Game.spawns[name].spawnHarvesterIfRequired();
         }
     }
-}
+    var towers = _.filter(Game.structures, (s:Structure) => s.structureType == STRUCTURE_TOWER) as StructureTower[];
+    for (let tower of towers) {
+        tower.attackClosestHostile;
+        tower.repairClosestStructure; 
+    }
+};

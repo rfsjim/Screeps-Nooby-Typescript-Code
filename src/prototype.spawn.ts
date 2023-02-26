@@ -23,4 +23,4 @@ StructureSpawn.prototype.spawnHarvesterIfRequired = function() {
             this.pos.y,
             {align: 'left', opacity: 0.8});
     }
-}
+};
