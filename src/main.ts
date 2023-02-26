@@ -1,14 +1,16 @@
-// lodash
-var _ = require('lodash');
+var _ = require('lodash'); // Lodash is a JavaScript library which provides utility functions for common programming tasks
+
+// required code
+require('./prototype.spawn'); // common code for all spawns
 
 // import modules
-import clearMemory from "./helper";
-import initRoom from "./init";
+import clearMemory from "./helper"; // local console helper functions
+import initRoom from "./init"; // local initalisation functions
 
 // import role modules
-import roleHarvester from "./role.harvester";
-import roleUpgrader from "./role.upgrader";
-import roleBuilder from "./role.builder";
+import roleHarvester from "./role.harvester"; // common code for all harvesters
+import roleUpgrader from "./role.upgrader"; // common code for all upgraders
+import roleBuilder from "./role.builder"; // common code for all builders
 
 module.exports.loop = function() {
 
@@ -28,28 +30,10 @@ module.exports.loop = function() {
     
     // get current progress
     for (var name in Game.rooms) {
-        console.log('Room "'+name+'" has '+Game.rooms[name].energyAvailable+' energy');
-    }
-
-    var harvesters = _.filter(Game.creeps, (creep:Creep) => creep.memory.role == 'harvester');
-    console.log('Harvesters: ' + harvesters);
-
+        console.log('Room "'+name+'" has '+Game.rooms[name].energyAvailable+' energy'); 
+        }
+    
     // run tick logic
-    if (harvesters < 2) {
-        var newName = 'Harvester ' + Game.time;
-        console.log('Spawning new harvester: ' + newName);
-        Game.spawns['Spawn1'].spawnCreep([WORK, CARRY, MOVE],newName, {memory: {role: 'harvester'}});
-    }
-
-    if (Game.spawns['Spawn1'].spawning) {
-        var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
-        Game.spawns['Spawn1'].room.visual.text(
-            '🛠️' + spawningCreep.memory.role,
-            Game.spawns['Spawn1'].pos.x + 1,
-            Game.spawns['Spawn1'].pos.y,
-            {align: 'left', opacity: 0.8}); 
-    }
-
     for (var name in Game.creeps) {
         var creep = Game.creeps[name];
         if (creep.memory.role == 'harvester') {
@@ -61,5 +45,10 @@ module.exports.loop = function() {
         if (creep.memory.role == 'builder') {
             roleBuilder.run(creep);
         }   
+    }
+    for (var name in Game.spawns) {
+        if (!Game.spawns[name].spawning) {
+            Game.spawns[name].spawnHarvesterIfRequired();
+        }
     }
 }

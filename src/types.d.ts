@@ -4,6 +4,7 @@ declare global {
     interface RoomMemory {
         exits: ExitsInformation;
         name: string;
+        harvesters: number;
     }
     interface CreepMemory {
         role: string;
