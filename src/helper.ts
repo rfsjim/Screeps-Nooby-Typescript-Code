@@ -1,11 +1,3 @@
-declare global {
-    namespace NodeJS {
-        interface Global {
-            clearMemory(): void;
-        }
-    }
-}
-
 export default function clearMemory() {
        // clear all memory to empty object
        RawMemory.set("{}");
@@ -18,7 +10,5 @@ export default function clearMemory() {
        Memory.powerCreeps = {};
    
        // console log
-       console.log('Memory Cleared to inital state');
+       console.log(`Memory Cleared to inital state`);
 }
-
-(global as any).clearMemory = clearMemory();
