@@ -49,7 +49,6 @@ declare global {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = () => {
-  console.log(`Current game tick is ${Game.time}`);
 
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
@@ -97,5 +96,6 @@ export const loop = () => {
   for (let tower of towers) {
     towerManager.attackClosestHostile(tower);
     towerManager.repairClosestStructure(tower);
+    towerManager.healClosestCreep(tower);
   }
 };
