@@ -12,8 +12,9 @@ import roleUpgrader, { Upgrader } from "role.upgrader";
 import roleBuilder, { Builder } from "role.builder";
 import "prototype.spawn";
 import towerManager from "towerManager";
-import initRoom from "initRoom";
 import clearMemory from "helper";
+import initRoom from "initRoom";
+import init from "init";
 
 declare global {
   /*
@@ -49,6 +50,12 @@ declare global {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = () => {
+  // Get my username if required
+  if (!Memory.username) {
+    const roomName = Object.keys(Game.rooms)[0];
+    let initalise = new init(roomName);
+    Memory.username = initalise.getUserName(roomName);
+  }
 
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
@@ -59,17 +66,19 @@ export const loop = () => {
   }
 
   // Ensure Room Memory is Initalised
-  for (const name in Game.rooms) {
-    if (!Memory.rooms[name].roomName) {
-      initRoom(name);
-    }
+  for (const roomName in Game.rooms) {
+    const roomInit = new initRoom(roomName);
+    
+    if (!Memory.rooms[roomName]) Memory.rooms[roomName] = {} as any;
+    if (!Memory.rooms[roomName].roomName) roomInit.initMemory(roomName);
+    if (Memory.rooms[roomName].lastChecked % 100 === 5) roomInit.getMemoryUpdates(roomName);
   }
 
   // Get Current Progress
   Memory.gcl = Game.gcl;
 
   // Run Tick Logic
-  for (let name in Game.creeps) {
+  for (const name in Game.creeps) {
     let creep = Game.creeps[name];
     if (creep.memory.role === 'harvester') {
       roleHarvester.run(creep);
@@ -83,7 +92,7 @@ export const loop = () => {
   }
 
   // Run Spawn Logic
-  for (let name in Game.spawns) {
+  for (const name in Game.spawns) {
     let spawn = Game.spawns[name];
     if (!spawn.spawning && (spawn.room.energyAvailable >= 
       (BODYPART_COST['move'] + BODYPART_COST['carry'] + BODYPART_COST['work']))) {
@@ -92,7 +101,7 @@ export const loop = () => {
   }
 
   // Run Tower Logic
-  let towers = filter(Game.structures, (s:Structure) => s.structureType == STRUCTURE_TOWER) as StructureTower[];
+  const towers = filter(Game.structures, (s:Structure) => s.structureType == STRUCTURE_TOWER) as StructureTower[];
   for (let tower of towers) {
     towerManager.attackClosestHostile(tower);
     towerManager.repairClosestStructure(tower);
