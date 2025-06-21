@@ -1,31 +1,34 @@
-interface TowerManager {
-    repairClosestStructure(tower:StructureTower):void;
-    attackClosestHostile(tower:StructureTower):void;
-    healClosestCreep(tower:StructureTower):void;
-}
+import sortBy from "lodash/sortBy";
+import filter from "lodash/filter";
 
-const towerManager:TowerManager = {
-    repairClosestStructure: (tower) => {
-        let closestDamagedStructre = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (structure:Structure) => structure.hits < (structure.hitsMax / 8)
-        });
-    
-        if (closestDamagedStructre) {
-            tower.repair(closestDamagedStructre);
+export default class towerManager {
+    repairClosestStructure(tower:StructureTower) {
+        const damagedStructre = filter(Game.structures,
+            (s) => s.hits < (s.hitsMax * 0.8) &&
+                   s.hits < 10000
+            );
+        const mostDamagedStructre = sortBy(damagedStructre, 'hits');
+            
+        if (mostDamagedStructre && tower.store[RESOURCE_ENERGY] >= tower.store.getCapacity(RESOURCE_ENERGY) /2) {
+            tower.repair(mostDamagedStructre[0]);
         }
-    },
-    attackClosestHostile: (tower) => {
-        let closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        
+    }
+
+    attackClosestHostile(tower:StructureTower) {
+        const closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+                
         if (closestHostile) {
             tower.attack(closestHostile);
         }
-    },
-    healClosestCreep: (tower) => {
-        let closestDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
+    }
+
+    healClosestCreep(tower:StructureTower) {
+        const closestDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
             filter: (myCreep:Creep) => myCreep.hits < myCreep.hitsMax
         });
-    }
-};
 
-export default (towerManager);
+        if (closestDamagedCreep) {
+            tower.heal(closestDamagedCreep);
+        }
+    }    
+}

@@ -53,8 +53,8 @@ export default class initRoom {
 
     /**
      * 
-     * @param {string} roomName - The name of the room 
-     * @returns {string} The username of the room owner, None if the room isn't owned, or Neutral if there is no controller
+     * @param roomName - The name of the room 
+     * @returns The username of the room owner, None if the room isn't owned, or Neutral if there is no controller
      */
     getRoomOwner(roomName:string) {
         let owner;
@@ -69,8 +69,8 @@ export default class initRoom {
 
     /**
      * 
-     * @param {string} roomName - The name of the room
-     * @returns {string} The status of the room either "Mine" if user owns, "Hostile" if other user owns or has reserved room, "Reserved" if user has it reserved, "Available" if room has controller but no owner, "Neutral" if room has no controller
+     * @param roomName - The name of the room
+     * @returns The status of the room either "Mine" if user owns, "Hostile" if other user owns or has reserved room, "Reserved" if user has it reserved, "Available" if room has controller but no owner, "Neutral" if room has no controller
      */
     getRoomStatus(roomName:string) {
         let status;

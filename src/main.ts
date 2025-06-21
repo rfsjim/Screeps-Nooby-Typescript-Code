@@ -4,13 +4,17 @@
     Starting 19th February 2023
 */
 
+if (Game.cpu.bucket < 500) {
+  throw new Error('Extremely low bucket - aborting script run at top level')
+}
+
 // Define Modules
 import filter from "lodash/filter";
 // import { ErrorMapper } from "utils/ErrorMapper";
 import roleHarvester from "role.harvester";
 import roleUpgrader, { Upgrader } from "role.upgrader";
 import roleBuilder, { Builder } from "role.builder";
-import "prototype.spawn";
+import "spawnManager";
 import towerManager from "towerManager";
 import clearMemory from "helper";
 import initRoom from "initRoom";
@@ -30,12 +34,18 @@ declare global {
     uuid: number;
     gcl: GlobalControlLevel;
     log: any;
+    towers: { [id: Id<StructureTower>]: TowerMemory};
   }
 
   interface CreepMemory {
     role: string;
     room: string;
     working: boolean;
+  }
+
+  interface TowerMemory {
+    room: string;
+    id: Id<StructureTower> | string;
   }
 
   // Syntax for adding proprties to `global` (ex "global.log")
@@ -69,7 +79,7 @@ export const loop = () => {
   for (const roomName in Game.rooms) {
     const roomInit = new initRoom(roomName);
     
-    if (!Memory.rooms[roomName]) Memory.rooms[roomName] = {} as any;
+    if (!Memory.rooms[roomName]) Memory.rooms[roomName] = {} as RoomMemory;
     if (!Memory.rooms[roomName].roomName) roomInit.initMemory(roomName);
     if (Memory.rooms[roomName].lastChecked % 100 === 5) roomInit.getMemoryUpdates(roomName);
   }
@@ -101,10 +111,29 @@ export const loop = () => {
   }
 
   // Run Tower Logic
-  const towers = filter(Game.structures, (s:Structure) => s.structureType == STRUCTURE_TOWER) as StructureTower[];
-  for (let tower of towers) {
-    towerManager.attackClosestHostile(tower);
-    towerManager.repairClosestStructure(tower);
-    towerManager.healClosestCreep(tower);
+  if (!Memory.towers) {
+    Memory.towers = {};
+    const towers = filter(Game.structures,
+      (s) => s.structureType == STRUCTURE_TOWER) as StructureTower[];
+    
+    if (towers) {
+        for (let tower of towers) {
+          Memory.towers[tower.id] = {} as TowerMemory;
+          Memory.towers[tower.id].id = tower.id;
+          Memory.towers[tower.id].room = tower.room.name;
+        }
+    }
+  }
+  
+  if (Memory.towers) {
+    const manageTower = new towerManager();
+
+    for (let i = 0; i < Object.keys(Memory.towers).length; i++) {
+      const towerId = Object.keys(Memory.towers)[i] as Id<StructureTower>;
+      const tower = Game.getObjectById(towerId) as StructureTower;
+      manageTower.attackClosestHostile(tower);
+      manageTower.repairClosestStructure(tower);
+      manageTower.healClosestCreep(tower);
+    }
   }
 };
