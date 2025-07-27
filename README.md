@@ -36,6 +36,12 @@ Quickly upgrade the controller to get access to extensions so room capacity can 
     * Prioritise quads, if insufficient resources then produce defenders as can be afforded.
 * Level 6 - Labs, extractors and terminals become available. Minerals are fetched from the extractor and transported to the source. Depending on availability of minerals in controlled rooms, reactions are basically implemented. Depending on a threshold excess minerals are sold on the market.
 
+#### Phase 1 - Bootstrap Screeps AI Strategy
+* **Goal** - Reach RCL 2 ASAP to unlock:
+    * Containers
+    * Extensions
+    * Inital Defensive Infrastructure
+
 Generate a layout for the room and builds the structures for the current RCL.
 When the controller level upgrades, check if it can build towers and more extensions.
 If the current number of rooms is less than the GCL, acquire new rooms.
@@ -85,6 +91,11 @@ Use publish - subscriber pattern to task creeps.
 ##### Core Roles
 * Builder - build buildings from constructions sites, repair roads/walls/ramparts
 * Miner - source of energy. mine energy sources in the room or neighboring rooms
+    * There are 4 kinds of available resources: `energy`, `minerals`, `power`, and `commodities`. They can all be harvested but how they are harvested and processed is different for each resource. It needs clean modular design pattern.
+    * Strategy pattern is the best fit for resource harvesting.
+    * The Strategy Pattern is ideal when you want to define a family of algorithms, encapsulate them, and make them interchangeable.
+    * Each resource type has its own harvesting strategy, and likely also its own transport, storage, and processing strategy.
+    * The core creep logic stays the same, but need to swap out the resource strategy depending on what the creep's role or assignment is.
 * Upgraders get energy from the storage, and put it into the controller.
 * Hauler - move energy to extensions and surplus into storage structures and transfers energy to free structures on the path. On low energy in storage, the harvester falls back to the start up phase without relying on anything (storage, links, other creeps).
 
