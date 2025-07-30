@@ -26,3 +26,25 @@ What should happen instead?
 
 Paste any console logs or errors here (if applicable):
 
+```
+[12:34:56] Error: creep attempted to harvest from null target
+```
+
+## 🧠 Possible Causes
+
+(Optional) Any thoughts on why this might be happening?
+
+## 💡 Environment
+
+- Screeps server: ☐ MMO ☐ Private
+- Branch: `main` / `dev` / other: ____
+- Version/commit hash (if applicable): `____`
+
+## 📸 Screenshots
+
+(Optional) Add screenshots if visual info is useful.
+
+---
+
+> Tip: Try to include just enough detail to help others reproduce the issue!
+
