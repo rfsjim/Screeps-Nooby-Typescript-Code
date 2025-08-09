@@ -110,7 +110,7 @@ export function getNumberOfSourceLocations(room: Room): number
  */
 export function getRoomPhase(room: Room): RoomPhase {
   const roomMemory = getRoomMemory(room);
-  if (!roomMemory) return -1;
+  if (!roomMemory) return RoomPhase.UnitiatedRoom;
   if (!roomMemory.creeps) return 0;
   const rcl = roomMemory.rcl ?? 0;
   const hasStorage = !!room.storage;

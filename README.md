@@ -146,7 +146,7 @@ Use publish - subscriber pattern to task creeps.
 
 **Strategy**: Assign one or two dedicated miners per source with exactly 5 WORK parts each (or 10 total per source).
 
-**Bonus**: Place a container adjacent to the source for static miners to dump into, avoiding movement inefficiencies.
+**Construction**: Place a container adjacent to the source for static miners to dump into, avoiding movement inefficiencies. Keep in mind that a source has 3,000 energy, a container can hold 2,000 energy. So balancing is required to ensure energy isn't lost.
 
 ##### Creep Role Decoupling
 **Avoid**: "do-everything" creeps. Specialize:
