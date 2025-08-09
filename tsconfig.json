@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "ESNext",
-    "lib": ["es2018"],
+    "lib": ["es2018", "dom"],
     "target": "es2018",
     "moduleResolution": "Node",
     "outDir": "dist",
@@ -10,7 +10,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["screeps"],
+    "types": ["screeps", "node"],
     "experimentalDecorators": true,
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,

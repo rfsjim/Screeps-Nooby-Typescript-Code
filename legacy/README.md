@@ -1,3 +1,7 @@
+# JavaScript Version - Screeps Nooby Code
+This code is from a much earlier stage in my development. It's archived here for educational and reference purposes only. It is not representative of current practices.
+
+# Legacy Reference
 Whilst it is old now, thPion's Screeps Nooby Guide inspired me to work a different version of this codebase.
 
 I selected [thPion's code](https://github.com/thPion/Screeps-Nooby-Guide) as a fork for this because it is very easy to understand and simple. It gives some good ideas about basic play that can be expanded upon. Other ideas have been heavily influenced by [jerroydmoore's screeps ai](https://github.com/jerroydmoore/screeps-ai). Both are licenced under MIT licence.

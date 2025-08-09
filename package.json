@@ -1,15 +1,20 @@
 {
   "name": "screeps-typescript",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "An adventure into Typescript using *Screeps: World* an open source MMO RTS sandbox game",
-  "main": "eslint.config.js",
+  "main": "eslint.config.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup -c",
-    "watch": "rollup -c -w",
-    "lint": "eslint src --ext .ts",
+    "changelog": "standard-version --skip.bump --skip.tag",
     "clean": "rm -rf dist",
-    "start": "npm run clean && npm run build"
+    "lint": "eslint src --ext .ts",
+    "release": "standard-version",
+    "release:patch": "standard-version --release-as patch",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "start": "npm run clean && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "rollup -c -w"
   },
   "repository": {
     "type": "git",
@@ -26,15 +31,19 @@
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/lodash": "^4.17.20",
+    "@types/node": "^24.1.0",
     "@types/screeps": "^3.3.8",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "eslint": "^9.32.0",
+    "node": "^20.19.4",
     "rollup": "^4.45.3",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "execSync": "^1.0.2",
     "lodash": "^4.17.21",
+    "standard-version": "^9.5.0",
     "tslib": "^2.8.1"
   }
 }

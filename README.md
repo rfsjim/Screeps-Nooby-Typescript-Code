@@ -19,6 +19,9 @@ An adventure into Typescript using *Screeps: World* an open source MMO RTS sandb
 * Memory optimisations structure config and cache data cleanly, reducing CPU usage.
 * Central Manager Co-ordinating Roles
 
+## Milestones
+- [ROADMAP](ROADMAP.md)
+
 ## Project Plan
 
 ### Expansion
@@ -298,3 +301,6 @@ Build an intel Memory module and use the data for expansion planning.
 * Intel
 
 #### Memory Structure
+
+# Contains Legacy Code
+This repo includes a legacy JavaScript implementation stored in /legacy/. Please don’t judge me — I was young, and JavaScript let me get away with too much.

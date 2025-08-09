@@ -4,11 +4,14 @@
  */
 
 import { tryHarvest } from "./creepBehaviours";
-import { CreepMemory } from "../types";
+import { getCreepMemory } from "managers/memoryManager";
 
 export function runUpgrader(creep: Creep)
 {
-    const memory = creep.memory as CreepMemory;
+    const memory = getCreepMemory(creep);
+    const targetId = memory.task?.targetId as Id<Source>;
+    if (!targetId) return;
+    if (memory.task?.status === 'tasked') memory.task.status = 'in_progress';
 
     if (memory.working && creep.store[RESOURCE_ENERGY] === 0)
     {
@@ -23,12 +26,12 @@ export function runUpgrader(creep: Creep)
 
     if (!memory.working)
     {
-        tryHarvest(creep);
+        tryHarvest(creep, targetId);
     } else
     {
         if (creep.room.controller)
         {
-            if (creep.upgradeController(creep.room.controller!) == ERR_NOT_IN_RANGE)
+            if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE)
             {
                 creep.moveTo(creep.room.controller!, {visualizePathStyle: {stroke: '#ffffff'}});
             }
