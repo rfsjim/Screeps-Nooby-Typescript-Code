@@ -3,7 +3,7 @@
  */
 
 import { Task, Role, ResourceAcquisitionMethod, AnyTask, RoomPhase, TaskType, TaskToTypeMap, StoredTask, HarvestTask, UpgradeTask, BuildTask, RepairTask, ResourceCollectionTask, FillTask } from "types"
-import { getRoomMemory, getCreepMemory } from "./memoryManager";
+import { getRoomMemory, getCreepMemory, getRoomPhase } from "./memoryManager";
 import { isPickupable, isWithdrawable, hasCarry, isResourceCollectionTask, isFillTask, getResourceTypeFromId, isHarvestTask, hasWork, isBuildTask, isRepairTask, isUpgradeTask, isRoomStorageFull } from "helper/helper";
 import { HANDOVER_TTL_THRESHOLD } from "consts";
 import { getDesiredCountForRole } from "./spawnManager";
@@ -64,6 +64,7 @@ export const roleRunners: Record<Role, (creep: Creep) => void> = {
  * @param role 
  */
 function runCreep(creep: Creep, role: Role):void {
+    if (!creep) return;
     const mem = getCreepMemory(creep);
 
     // Reassignment logic (e.g., upgrade harvester to upgrader if storage is full) and cooldown has passed
@@ -267,20 +268,9 @@ function createTasks(room: Room): AnyTask[] | undefined
     if (!room.controller) return undefined;     // For now ignore rooms without a controller
     if (!roomMemory.sources) return undefined;  // For now ignore rooms without a source
 
-    let newTasks: AnyTask[] = [];     // A list of tasks to start creep doing something in room
+    if (roomMemory.phase === RoomPhase.UnitiatedRoom) getRoomPhase(room);
 
-    // task cleanup
-    tasks.filter(task =>
-    {
-        // remove if target no longer exists
-        if (task.targetId && !Game.getObjectById(task.targetId)) return false;
-        // remove if creep assigned is gone
-        for (const id in task.assignedCreepIds)
-        {
-            if (task.assignedCreepIds && !Game.getObjectById(id as Id<Creep>)) return false;
-        }
-        return true;
-    });
+    let newTasks: AnyTask[] = [];     // A list of tasks to start creep doing something in room
 
     switch (roomMemory.phase) {
         case RoomPhase.DeathSpiral:
@@ -513,6 +503,7 @@ class SustainabilityPlanner
 
         for (const creepName of Object.keys(roomMemory.creeps))
         {
+            if (!Game.creeps[creepName]) continue;
             const CreepMemory = getCreepMemory(Game.creeps[creepName]);
             if (!CreepMemory.task) continue;
             if (CreepMemory.task?.type === 'harvest') harvestingWorkParts += Game.creeps[creepName].getActiveBodyparts(WORK);
@@ -536,6 +527,7 @@ class SustainabilityPlanner
 
         for (const creepName of Object.keys(roomMemory.creeps))
         {
+            if (!Game.creeps[creepName]) continue;
             const CreepMemory = getCreepMemory(Game.creeps[creepName]);
             if (!CreepMemory.task) continue;
             const spendingWorkParts = Game.creeps[creepName].getActiveBodyparts(WORK);
@@ -641,13 +633,14 @@ export const taskManager =
             const roomSustainability = new SustainabilityPlanner();
             const roomEnergyNetFlow = roomSustainability.getNetFlow(room);
 
-            if (roomEnergyNetFlow < 0) mem.phase = 0;
+            if (roomEnergyNetFlow < 0) mem.phase = RoomPhase.DeathSpiral;
         }
 
         // Assign Tasks to Idle or Completed Creeps
         for (const creepName in Game.creeps)
         {
             const creep = Game.creeps[creepName];
+            if (!creep) continue;
             const mem = getCreepMemory(creep);
 
             if (shouldHandOverTask(creep))
@@ -705,5 +698,4 @@ export const taskManager =
 
         return task;
     },
-    runCreep,
 };
