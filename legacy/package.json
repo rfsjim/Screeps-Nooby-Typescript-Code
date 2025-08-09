@@ -1,0 +1,33 @@
+{
+  "name": "screeps-bot-screeps-nooby-code",
+  "version": "0.0.5",
+  "description": "A screeps AI",
+  "license": "MIT",
+  "keywords": [
+    "screeps",
+    "game-ai"
+  ],
+  "author": "rfsjim",
+  "bugs": {
+    "url": "https://github.com/rfsjim/Screeps-Nooby-Code/issues"
+  },
+  "homepage": "https://github.com/rfsjim/Screeps-Nooby-Code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rfsjim/Screeps-Nooby-Code.git"
+  },
+  "type": "commonjs",
+  "main": "src/main.js",
+  "screeps_bot": true,
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-clean": "^2.0.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-nodeunit": "^0.4.1",
+    "grunt-contrib-uglify": "^0.5.1",
+    "grunt-file-append": "0.0.7",
+    "grunt-screeps": "^1.5.0"
+  }
+}

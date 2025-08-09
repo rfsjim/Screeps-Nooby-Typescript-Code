@@ -47,4 +47,3 @@ Paste any console logs or errors here (if applicable):
 ---
 
 > Tip: Try to include just enough detail to help others reproduce the issue!
-
