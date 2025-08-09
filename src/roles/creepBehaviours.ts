@@ -36,5 +36,6 @@ export function tryHarvest(creep: Creep, targetId: Id<Source>): boolean
 export function addHarvestedEnergy(room: Room, amount: number): void
 {
     const controllerProgressMemory = getRoomMemory(room);
+    if (!controllerProgressMemory) return;
     controllerProgressMemory.controllerProgress!.totalEnergyHarvested += amount;
 }

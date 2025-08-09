@@ -29,6 +29,7 @@ export const loop = () =>
 
     // init memory for room
     const memory = getRoomMemory(room);
+    if (!memory) continue;
 
     // find and track sources
     if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);

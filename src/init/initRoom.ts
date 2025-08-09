@@ -1,4 +1,4 @@
-import { getRoomMemory, getNumberOfSourceLocations } from "managers/memoryManager";
+import { getRoomMemory, getNumberOfSourceLocations, getRoomPhase } from "managers/memoryManager";
 
 export class roomObjectAnalyser<T extends RoomObject>
 {
@@ -80,6 +80,10 @@ export class roomObjectAnalyser<T extends RoomObject>
 export function initRoom(room: Room): void
 {
   const roomMemory = getRoomMemory(room);
+  if (!roomMemory) return;
+
+  roomMemory.phase = getRoomPhase(room);
+  roomMemory.maxHarvesters = getNumberOfSourceLocations(room);
   
   const sources = room.find(FIND_SOURCES);
   if (sources.length === 0) return;

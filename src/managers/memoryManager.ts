@@ -6,6 +6,7 @@ import { RoomMemory, CreepMemory, Role, EnergyMinerMemory, RoomPhase} from "type
  */
 export function resetControllerProgress(room: Room): void {
     const roomMemory = getRoomMemory(room);
+    if (roomMemory === null) return;
     delete roomMemory.controllerProgress;
 }
 
@@ -15,8 +16,10 @@ export function resetControllerProgress(room: Room): void {
  * @param room 
  * @returns
  */
-export function getRoomMemory(room: Room): RoomMemory
+export function getRoomMemory(room: Room): RoomMemory | null
 {
+    if (!room || !room.controller || !room.controller.my) return null; 
+
     if (!room.memory) room.memory = {} as RoomMemory;
     
     const memory = room.memory as RoomMemory;
@@ -24,21 +27,21 @@ export function getRoomMemory(room: Room): RoomMemory
     if (!memory.controllerProgress) memory.controllerProgress = {level: 0, totalEnergyHarvested: 0};
     if (!memory.creepCounts) memory.creepCounts = {};
     if (!memory.creeps) memory.creeps = {};
-    if (!memory.maxHarvesters) memory.maxHarvesters = getNumberOfSourceLocations(room);
+    if (!memory.maxHarvesters) memory.maxHarvesters = 0;
     if (!memory.owner)
     {
         if (!room.controller?.owner) memory.owner = 'None';
         else memory.owner = room.controller.owner;
     }
-    if (!memory.phase) memory.phase = getRoomPhase(room);
+    if (!memory.phase) memory.phase = -1;
     if (!memory.rcl)
     {
-        if (!room.controller?.level) memory.rcl = 0;
+        if (!room.controller?.level) memory.rcl = -1;
         else memory.rcl = room.controller?.level;
     }
     if (!memory.spawns) memory.spawns = {};
     if (!memory.sources) memory.sources = {};
-    return memory as RoomMemory;
+    return memory;
 }
 
 /**
@@ -89,6 +92,7 @@ export function getInitialEnergyMinerMemory(sourceId: Id<Source>): EnergyMinerMe
 export function getNumberOfSourceLocations(room: Room): number
 {
   const roomMemory = getRoomMemory(room);
+  if (!roomMemory) return 0;
   let totalNumPositions: number = 0;
 
   for (const sourceID in roomMemory.sources)
@@ -106,6 +110,7 @@ export function getNumberOfSourceLocations(room: Room): number
  */
 export function getRoomPhase(room: Room): RoomPhase {
   const roomMemory = getRoomMemory(room);
+  if (!roomMemory) return -1;
   if (!roomMemory.creeps) return 0;
   const rcl = roomMemory.rcl ?? 0;
   const hasStorage = !!room.storage;

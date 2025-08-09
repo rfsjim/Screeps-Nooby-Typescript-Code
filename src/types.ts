@@ -65,6 +65,7 @@ export enum ResourceAcquisitionMethod
 
 export enum RoomPhase
 {
+  UnitiatedRoom = -1,       // Only accessible when memory initially set must be updated
   DeathSpiral = 0,          // Storage empty, <2 harvesters, critical fallback mode
   InitialBootstrap = 1,     // No storage, no roads, minimal income, early energy unlock
   StableEarlyGame = 2,      // First container/storage, extensions built, basic roads start,
@@ -76,6 +77,7 @@ export enum RoomPhase
 };
 
 export const AllPhases: RoomPhase[] = [
+  RoomPhase.UnitiatedRoom,
   RoomPhase.DeathSpiral,
   RoomPhase.InitialBootstrap,
   RoomPhase.StableEarlyGame,

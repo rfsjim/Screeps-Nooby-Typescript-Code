@@ -4,7 +4,7 @@
 
 import { Task, Role, ResourceAcquisitionMethod, AnyTask, RoomPhase, TaskType, TaskToTypeMap, StoredTask, HarvestTask, UpgradeTask, BuildTask, RepairTask, ResourceCollectionTask, FillTask } from "types"
 import { getRoomMemory, getCreepMemory } from "./memoryManager";
-import { isPickupable, isWithdrawable, hasCarry, isResourceCollectionTask, isFillTask, getResourceTypeFromId, isHarvestTask, hasWork, isBuildTask, isRepairTask, isUpgradeTask } from "helper/helper";
+import { isPickupable, isWithdrawable, hasCarry, isResourceCollectionTask, isFillTask, getResourceTypeFromId, isHarvestTask, hasWork, isBuildTask, isRepairTask, isUpgradeTask, isRoomStorageFull } from "helper/helper";
 import { HANDOVER_TTL_THRESHOLD } from "consts";
 import { getDesiredCountForRole } from "./spawnManager";
 import { runHarvester } from "roles/role.harvester";
@@ -74,6 +74,7 @@ function runCreep(creep: Creep, role: Role):void {
     {
         const room = creep.room;
         const roomMemory = getRoomMemory(room);
+        if (!roomMemory) return;
         const roomCreepCount = roomMemory.creepCounts || {};
 
         const maxUpgraders = room.controller ? room.controller.level : 1;
@@ -138,6 +139,7 @@ function retaskUpgraderToHarvester(creep: Creep): void
 export function shouldUpgradeController(room: Room, currentLevel: number): boolean
 {
     const progress = getRoomMemory(room);
+    if (!progress) return false;
     if (!progress.controllerProgress) return false;
 
     if (currentLevel === 0 && progress.controllerProgress.totalEnergyHarvested >= 200) return true;
@@ -174,6 +176,7 @@ function cleanupMemory()
     {
         const room = Game.rooms[roomName];
         const mem = getRoomMemory(room);
+        if (!mem) return;
 
         mem.creeps = {};
         mem.creepCounts = {};
@@ -221,6 +224,11 @@ function taskFactory(stored: StoredTask): AnyTask
     }
 }
 
+function taskExists(type: TaskType, targetId: Id<_HasId>): boolean
+{
+    return global.allTasks.some(t => t.type === type && t.targetId === targetId);
+}
+
 /**
  * Create Task that can be overriden with required parameters
  * @param type 
@@ -255,10 +263,24 @@ function createTasks(room: Room): AnyTask[] | undefined
     // This will need to be refactored for those cases
     const tasks = ensureGlobalTasks(); // hydrate tasks first
     const roomMemory = getRoomMemory(room);
+    if (!roomMemory) return undefined;
     if (!room.controller) return undefined;     // For now ignore rooms without a controller
     if (!roomMemory.sources) return undefined;  // For now ignore rooms without a source
 
     let newTasks: AnyTask[] = [];     // A list of tasks to start creep doing something in room
+
+    // task cleanup
+    tasks.filter(task =>
+    {
+        // remove if target no longer exists
+        if (task.targetId && !Game.getObjectById(task.targetId)) return false;
+        // remove if creep assigned is gone
+        for (const id in task.assignedCreepIds)
+        {
+            if (task.assignedCreepIds && !Game.getObjectById(id as Id<Creep>)) return false;
+        }
+        return true;
+    });
 
     switch (roomMemory.phase) {
         case RoomPhase.DeathSpiral:
@@ -270,16 +292,20 @@ function createTasks(room: Room): AnyTask[] | undefined
                     console.warn(`[WARN] Problem with ${source} expected ${RESOURCE_ENERGY} received unknown`);
                     continue;
                 }
-                newTasks.push(createTask(
-                "harvest",
+                if (isRoomStorageFull(room)) continue;
+                if (!taskExists("harvest", source as Id<Source>))
                 {
-                    id: `harvest-${source}-${Game.time}`,
-                    maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
-                    targetId: source as Id<Source>,
-                    method: ResourceAcquisitionMethod.Harvest,
-                    resourceType: resourceType,
-                    status: "untasked"
-                }));   
+                    newTasks.push(createTask(
+                    "harvest",
+                    {
+                        id: `harvest-${source}-${Game.time}`,
+                        maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
+                        targetId: source as Id<Source>,
+                        method: ResourceAcquisitionMethod.Harvest,
+                        resourceType: resourceType,
+                        status: "untasked"
+                    }));
+                }   
             }
             break;
         case RoomPhase.InitialBootstrap:
@@ -291,25 +317,33 @@ function createTasks(room: Room): AnyTask[] | undefined
                     console.warn(`[WARN] Problem with ${source} expected ${RESOURCE_ENERGY} received unknown`);
                     continue;
                 }
-                newTasks.push(createTask(
-                "harvest",
+                if (isRoomStorageFull(room)) continue;
+                if (!taskExists("harvest", source as Id<Source>))
                 {
-                    id: `harvest-${source}-${Game.time}`,
-                    maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
-                    targetId: source as Id<Source>,
-                    method: ResourceAcquisitionMethod.Harvest,
-                    resourceType: resourceType,
-                    status: "untasked"
-                }));    
+                    newTasks.push(createTask(
+                    "harvest",
+                    {
+                        id: `harvest-${source}-${Game.time}`,
+                        maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
+                        targetId: source as Id<Source>,
+                        method: ResourceAcquisitionMethod.Harvest,
+                        resourceType: resourceType,
+                        status: "untasked"
+                    })); 
+                }
+    
             }
-            newTasks.push(createTask(
-            "upgrade",
+            if (!taskExists("upgrade", room.controller.id))
             {
-                id: `upgrade-${Game.time}`,
-                maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
-                targetId: room.controller.id,
-                status: "untasked"
-            }));
+                newTasks.push(createTask(
+                "upgrade",
+                {
+                    id: `upgrade-${Game.time}`,
+                    maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
+                    targetId: room.controller.id,
+                    status: "untasked"
+                }));
+            }
             break;
         case RoomPhase.StableEarlyGame:
             for (const source of Object.keys(roomMemory.sources))
@@ -320,25 +354,33 @@ function createTasks(room: Room): AnyTask[] | undefined
                     console.warn(`[WARN] Problem with ${source} expected ${RESOURCE_ENERGY} received unknown`);
                     continue;
                 }
-                newTasks.push(createTask(
-                "harvest",
+                if (isRoomStorageFull(room)) continue;
+                if (taskExists("harvest", source as Id<Source>))
                 {
+                    newTasks.push(createTask(
+                    "harvest",
+                    {
                     id: `energyMiner-${source}-${Game.time}`,
                     maxCreeps: 1,
                     targetId: source as Id<Source>,
                     method: ResourceAcquisitionMethod.Harvest,
                     resourceType: resourceType,
                     status: "untasked"
-                }));
+                    }));
+                }
             }
-            newTasks.push(createTask(
-                "upgrade",
-                {
-                    id: `upgrade-${Game.time}`,
-                    maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
-                    targetId: room.controller.id,
-                    status: "untasked"
-                }))
+            if (taskExists("upgrade", room.controller.id))
+            {
+                newTasks.push(createTask(
+                    "upgrade",
+                    {
+                        id: `upgrade-${Game.time}`,
+                        maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
+                        targetId: room.controller.id,
+                        status: "untasked"
+                    }));
+            }
+
             break;
         // TODO add in other required creep orders as room progresses
         case RoomPhase.MidGame:
@@ -465,6 +507,7 @@ class SustainabilityPlanner
     calculateEnergyInflow(room: Room): number
     {
         const roomMemory = getRoomMemory(room);
+        if (!roomMemory) return 0;
         if (!roomMemory.creeps) return 0;
         let harvestingWorkParts = 0;
 
@@ -487,6 +530,7 @@ class SustainabilityPlanner
     calculateEnergyOutflow(room: Room): number
     {
         const roomMemory = getRoomMemory(room);
+        if (!roomMemory) return 0;
         if (!roomMemory.creeps) return 0;
         let outflow = 0;
 
@@ -527,9 +571,18 @@ class SustainabilityPlanner
      */
     recommendDeprioritisedTasks(room: Room): Task[]
     {
+        let roomPhase;
         const netFlow = this.getNetFlow(room);
         const tasks = createTasks(room) as Task[]; // TODO Pull from taskmanager
-        const roomPhase = getRoomMemory(room).phase;
+        const mem = getRoomMemory(room);
+        if (mem === null)
+            {
+                roomPhase = 0;
+            }
+        else
+        {
+            roomPhase = mem.phase;   
+        }
 
         if (netFlow < 0)
         {
@@ -554,16 +607,34 @@ class SustainabilityPlanner
 export const taskManager =
 {
     run(): void {
+        // Cleanup
+        if (Game.time % 10 === 0) cleanupMemory();
+        
         // Ensure Global Task Store
         const storedTasks = Memory.tasks ?? [];
         global.allTasks = storedTasks.map(taskFactory);
-        const tasks = global.allTasks;  
+        let tasks = global.allTasks; 
+        
+        // task cleanup
+        tasks.filter(task =>
+        {
+            // remove if target no longer exists
+            if (task.targetId && !Game.getObjectById(task.targetId)) return false;
+            // remove if creep assigned is gone
+            for (const id in task.assignedCreepIds)
+            {
+                if (task.assignedCreepIds && !Game.getObjectById(id as Id<Creep>)) return false;
+            }
+            return true;
+        });
 
         // Create Tasks for Each Room
         for (const roomName in Game.rooms)
         {
             const room = Game.rooms[roomName];
             const mem = getRoomMemory(room);
+            if (!mem) continue;
+            if (!room) continue;
             
             createTasks(room);
 
@@ -603,9 +674,6 @@ export const taskManager =
 
         // Save Tasks
         saveTasks();
-
-        // Cleanup
-        if (Game.time % 10 === 0) cleanupMemory();
     },
 
     getNextAvailableTask(creep : Creep): AnyTask | undefined

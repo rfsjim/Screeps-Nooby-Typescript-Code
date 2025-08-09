@@ -209,3 +209,10 @@ function isDeposit(obj: unknown): obj is Deposit
     !('mineralType' in obj)
   );
 }
+
+
+export function isRoomStorageFull(room: Room): boolean
+{
+  if (!room.controller || !room.controller.my ) return false;
+  return (room.energyCapacityAvailable - room.energyAvailable) === 0; 
+}

@@ -13,6 +13,7 @@ export function setRoomTasks(room: Room)
 {
     if (!room.controller) return;
     const roomMemory = getRoomMemory(room);
+    if (!roomMemory) return;
     if (!roomMemory.spawns) return;
     const spawn = Game.getObjectById(Object.keys(roomMemory.spawns)[0] as Id<StructureSpawn>);
     if (!spawn) return;
@@ -32,6 +33,7 @@ export function setRoomTasks(room: Room)
 function setRoadRequirements(room: Room)
 {
     const roomMemory = getRoomMemory(room);
+    if (!roomMemory) return;
     switch (roomMemory.phase)
     {
         case 1:
@@ -53,6 +55,7 @@ function setRoadRequirements(room: Room)
 }
 
 const wallRepairThreshold: Record<RoomPhase, number> = {
+    '-1': 0,
     0: 100,
     1: 500,
     2: 1000,
@@ -63,6 +66,7 @@ const wallRepairThreshold: Record<RoomPhase, number> = {
 };
 
 const storageTarget: Record<RoomPhase, number> = {
+    '-1': 0,
     0: 0,
     1: 300,
     2: 1000,

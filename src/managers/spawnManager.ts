@@ -7,6 +7,7 @@ import { Role, RoleComposition, RoomPhase } from "types";
 
 export const desiredCreepsByName: Record<keyof typeof RoomPhase, RoleComposition> =
 {
+    UnitiatedRoom: {},
     DeathSpiral: {harvester : 2},
     InitialBootstrap: {harvester : 3, upgrader: 1},
     StableEarlyGame: {energyMiner : 2, upgrader: 2},
@@ -18,6 +19,7 @@ export const desiredCreepsByName: Record<keyof typeof RoomPhase, RoleComposition
 
 const desiredCreeps: Record<RoomPhase, RoleComposition> =
 {
+    [RoomPhase.UnitiatedRoom]: {},
     [RoomPhase.DeathSpiral]: {harvester : 2},
     [RoomPhase.InitialBootstrap]: {harvester : 3, upgrader: 1},
     [RoomPhase.StableEarlyGame]: {energyMiner : 2, upgrader: 2},
@@ -53,6 +55,7 @@ export function manageSpawning(room: Room): void
     const upgraders = Object.values(Game.creeps).filter((c) => (getCreepMemory(c)).role === 'upgrader' satisfies Role);
 
     const roomMemory = getRoomMemory(room);
+    if (!roomMemory) return;
     const maxUpgraders = (room.controller.level + 1) | 1;
 
     if (!spawn.spawning)
