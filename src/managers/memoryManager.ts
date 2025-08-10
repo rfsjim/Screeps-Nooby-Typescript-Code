@@ -16,31 +16,21 @@ export function resetControllerProgress(room: Room): void {
  * @param room 
  * @returns
  */
-export function getRoomMemory(room: Room): RoomMemory | null
+export function getRoomMemory(room: Room): RoomMemory
 {
-    if (!room || !room.controller || !room.controller.my) return null; 
-
     if (!room.memory) room.memory = {} as RoomMemory;
     
     const memory = room.memory as RoomMemory;
     
     if (!memory.controllerProgress) memory.controllerProgress = {level: 0, totalEnergyHarvested: 0};
-    if (!memory.creepCounts) memory.creepCounts = {};
-    if (!memory.creeps) memory.creeps = {};
-    if (!memory.maxHarvesters) memory.maxHarvesters = 0;
-    if (!memory.owner)
-    {
-        if (!room.controller?.owner) memory.owner = 'None';
-        else memory.owner = room.controller.owner;
-    }
-    if (!memory.phase) memory.phase = -1;
-    if (!memory.rcl)
-    {
-        if (!room.controller?.level) memory.rcl = -1;
-        else memory.rcl = room.controller?.level;
-    }
-    if (!memory.spawns) memory.spawns = {};
-    if (!memory.sources) memory.sources = {};
+    if (memory.creepCounts === undefined) memory.creepCounts = {};
+    if (memory.creeps === undefined) memory.creeps = {};
+    if (memory.maxHarvesters === undefined) memory.maxHarvesters = 0;
+    if (memory.owner === undefined) memory.owner = room.controller?.owner ?? 'None'
+    if (memory.phase === undefined) memory.phase = RoomPhase.UnitiatedRoom;
+    if (memory.rcl === undefined) memory.rcl = room.controller?.level ?? -1;
+    if (memory.spawns === undefined) memory.spawns = {};
+    if (memory.sources === undefined) memory.sources = {};
     return memory;
 }
 
@@ -110,17 +100,29 @@ export function getNumberOfSourceLocations(room: Room): number
  */
 export function getRoomPhase(room: Room): RoomPhase {
   const roomMemory = getRoomMemory(room);
-  if (!roomMemory) return RoomPhase.UnitiatedRoom;
-  if (!roomMemory.creeps) return 0;
-  const rcl = roomMemory.rcl ?? 0;
-  const hasStorage = !!room.storage;
-  const isEmergency = room.energyAvailable < 100 && Object.keys(roomMemory.creeps).length < 2;
+  if (roomMemory === undefined) return RoomPhase.UnitiatedRoom;
 
-  if (isEmergency) return 0;
-  if (rcl < 2) return 1;
-  if (rcl === 2 && !hasStorage) return 2;
-  if (rcl >= 4 && hasStorage) return 3;
-  if (rcl >= 6 && room.terminal) return 4;
-  if (rcl === 8) return 5;
-  return 6;
+  const rcl = room.controller?.level ?? -1;
+  const hasStorage = !!room.storage;
+  const creepCount = Object.keys(roomMemory.creeps ?? {}).length
+  const isEmergency = room.energyAvailable < 100 && Object.keys(roomMemory.creeps ?? 0).length < 2;
+
+  let phase: RoomPhase;
+
+  if (rcl < 1) phase = RoomPhase.UnitiatedRoom;
+  else if (isEmergency) phase = RoomPhase.DeathSpiral;
+  else if (rcl < 2) phase = RoomPhase.InitialBootstrap;
+  else if (rcl === 2 && !hasStorage) phase = RoomPhase.StableEarlyGame;
+  else if (rcl >= 4 && hasStorage) phase = RoomPhase.MidGame;
+  else if (rcl >= 6 && room.terminal) phase = RoomPhase.NearMax;
+  else if (rcl === 8) phase = RoomPhase.MaxSingleRoom;
+  else phase = RoomPhase.ExpansionCandidate;
+
+  if (roomMemory.phase !== phase)
+  {
+    console.log(`[${room.name}] Phase -> ${RoomPhase[phase]} (${phase}), RCL=${rcl}, creeps=${creepCount}, storage=${hasStorage}`);
+    roomMemory.phase = phase;
+  }
+
+  return phase;
 }

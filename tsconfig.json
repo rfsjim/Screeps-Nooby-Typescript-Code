@@ -21,6 +21,8 @@
   "exclude": [
     "node_modules",
     "src_backup",
-    "dist"
+    "dist",
+    "test",
+    "experimental"
   ]
 }

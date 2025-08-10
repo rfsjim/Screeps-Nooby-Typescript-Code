@@ -38,8 +38,8 @@ export const loop = () =>
     manageSpawning(room);
   }
   
-  if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
-  {
-    Game.cpu.generatePixel();
-  }
+  // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
+  // {
+  //   Game.cpu.generatePixel();
+  // }
 };
