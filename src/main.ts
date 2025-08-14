@@ -5,11 +5,11 @@
     Last Updated 9th August 2025
 
     Version:  0.0.7
-    Build:    33
+    Build:    37
 */
 
 // Import functions etc
-import { getRoomMemory, getRoomPhase } from "managers/memoryManager";
+import { getRoomMemory } from "managers/memoryManager";
 import { initRoom } from "init/initRoom";
 import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
@@ -38,8 +38,8 @@ export const loop = () =>
     manageSpawning(room);
   }
   
-  if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
-  {
-    Game.cpu.generatePixel();
-  }
+  // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
+  // {
+  //   Game.cpu.generatePixel();
+  // }
 };

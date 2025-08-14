@@ -4,7 +4,8 @@
   "description": "An adventure into Typescript using *Screeps: World* an open source MMO RTS sandbox game",
   "main": "eslint.config.mjs",
   "scripts": {
-    "build": "rollup -c",
+    "build": "tsc -p tsconfig.json && rollup -c rollup.config.mjs",
+    "build:experimental":"tsc -p tsconfig.experimental.json && rollup -c rollup.experimental.config.mjs",
     "changelog": "standard-version --skip.bump --skip.tag",
     "clean": "rm -rf dist",
     "lint": "eslint src --ext .ts",

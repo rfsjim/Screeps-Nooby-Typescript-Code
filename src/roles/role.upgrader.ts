@@ -4,13 +4,18 @@
  */
 
 import { tryHarvest } from "./creepBehaviours";
-import { getCreepMemory } from "managers/memoryManager";
+import { getCreepMemory, getRoomMemory } from "managers/memoryManager";
 
 export function runUpgrader(creep: Creep)
 {
     const memory = getCreepMemory(creep);
-    const targetId = memory.task?.targetId as Id<Source>;
-    if (!targetId) return;
+    const roomMemory = getRoomMemory(creep.room);
+    if (!roomMemory.sources) return; 
+    const sourceId = roomMemory.sources && Object.keys(roomMemory.sources)[0] as Id<Source>;
+    const controllerId = memory.task?.targetId as Id<StructureController>;
+    const controller = Game.getObjectById(controllerId);
+
+    if (!controllerId) return;
     if (memory.task?.status === 'tasked') memory.task.status = 'in_progress';
 
     if (memory.working && creep.store[RESOURCE_ENERGY] === 0)
@@ -26,14 +31,14 @@ export function runUpgrader(creep: Creep)
 
     if (!memory.working)
     {
-        tryHarvest(creep, targetId);
+        tryHarvest(creep, sourceId);
     } else
     {
-        if (creep.room.controller)
+        if (controller)
         {
-            if (creep.upgradeController(creep.room.controller!) === ERR_NOT_IN_RANGE)
+            if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
             {
-                creep.moveTo(creep.room.controller!, {visualizePathStyle: {stroke: '#ffffff'}});
+                creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
             }
         }
     }

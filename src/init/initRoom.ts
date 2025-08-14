@@ -110,6 +110,31 @@ export function initRoom(room: Room): void
     }
   }
 
+  const minerals = room.find(FIND_MINERALS);
+  if (minerals.length ===  0) return;
+
+  roomMemory.mineral ??= {};
+
+  for (const mineral of minerals)
+  {
+    if (!mineral) continue;
+    const mineralAnalyser = new roomObjectAnalyser(mineral);
+
+    const mineralID = mineralAnalyser.getId();
+    const {x, y} = mineralAnalyser.getCoords();
+    const mineralType = mineral.mineralType;
+
+    if (mineralID)
+    {
+      roomMemory.mineral[mineralID] =
+      {
+        x,
+        y,
+        type: mineralType
+      };
+    }
+  }
+
   roomMemory.maxHarvesters = getNumberOfSourceLocations(room);
   
   const spawns = room.find(FIND_MY_SPAWNS);
