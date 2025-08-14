@@ -86,7 +86,7 @@ function runCreep(creep: Creep, role: Role):void {
         (roomCreepCount['upgrader'] || 0) < maxUpgraders)
         {
             // Don't let harvesters stand around doing nothing, start to upgrade instead.
-            retaskHarvesterToUpgrader(creep);
+            // retaskHarvesterToUpgrader(creep);
         }
 
         if (role === 'upgrader' satisfies Role &&
@@ -94,7 +94,8 @@ function runCreep(creep: Creep, role: Role):void {
             (roomCreepCount["harvester"] || 0) < 3)
         {
             // Energy getting low in room? Convert back to harvester
-            retaskUpgraderToHarvester(creep);
+            // retaskUpgraderToHarvester(creep);
+            // console.log(`retasked - ${creep}`);
         }
     }
 
@@ -302,6 +303,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
             for (const source of Object.keys(roomMemory.sources))
             {
                 const resourceType = getResourceTypeFromId(source as Id<Source>);
+
                 if ( resourceType === 'unknown')
                 {
                     console.warn(`[WARN] Problem with ${source} expected ${RESOURCE_ENERGY} received unknown`);
@@ -321,18 +323,19 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                         status: "untasked"
                     })); 
                 }
-    
-            }
-            if (!taskExists("upgrade", room.controller.id))
-            {
-                newTasks.push(createTask(
-                "upgrade",
+
+                if (!taskExists("upgrade", room.controller.id))
                 {
-                    id: `upgrade-${Game.time}`,
-                    maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
-                    targetId: room.controller.id,
-                    status: "untasked"
-                }));
+                    newTasks.push(createTask(
+                    "upgrade",
+                    {
+                        id: `upgrade-${Game.time}`,
+                        maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
+                        targetId: room.controller.id,
+                        status: "untasked",
+                        sourceId: source as Id<Source>
+                    }));
+                }
             }
             break;
         case RoomPhase.StableEarlyGame:
@@ -358,19 +361,19 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     status: "untasked"
                     }));
                 }
-            }
-            if (taskExists("upgrade", room.controller.id))
-            {
-                newTasks.push(createTask(
+                if (!taskExists("upgrade", room.controller.id))
+                {
+                    newTasks.push(createTask(
                     "upgrade",
                     {
                         id: `upgrade-${Game.time}`,
                         maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
                         targetId: room.controller.id,
-                        status: "untasked"
+                        status: "untasked",
+                        sourceId: source as Id<Source>
                     }));
+                }
             }
-
             break;
         // TODO add in other required creep orders as room progresses
         case RoomPhase.MidGame:
@@ -604,7 +607,7 @@ export const taskManager =
         // Ensure Global Task Store
         const storedTasks = Memory.tasks ?? [];
         global.allTasks = storedTasks.map(taskFactory);
-        let tasks = global.allTasks; 
+        let tasks = ensureGlobalTasks(); 
         
         // task cleanup
         tasks = tasks.filter(task =>
@@ -651,7 +654,8 @@ export const taskManager =
 
             if (mem.task === undefined || mem.task.status === 'completed' || mem.task.status === 'error')
             {
-                const nextTask = this.getNextAvailableTask(creep, tasks);
+                const role = mem.role;
+                const nextTask = this.getNextAvailableTask(creep, role, tasks);
                 if (nextTask) assignTask(creep, nextTask);
             }
         }
@@ -668,7 +672,7 @@ export const taskManager =
         saveTasks(tasks);
     },
 
-    getNextAvailableTask(creep : Creep, tasks: AnyTask[]): AnyTask | undefined
+    getNextAvailableTask(creep : Creep, role: Role, tasks: AnyTask[]): AnyTask | undefined
     {
         // TODO Add further logic - currently picks the first untasked task
         const task = tasks.find(t =>
@@ -679,11 +683,11 @@ export const taskManager =
             if (!(notFull && availableStatus)) return false;
 
             // Match task type to body parts
-            if (isHarvestTask(t)) return hasWork(creep);
-            if (isBuildTask(t)) return hasWork(creep) && hasCarry(creep);
-            if (isRepairTask(t)) return hasWork(creep) && hasCarry(creep);
-            if (isUpgradeTask(t)) return hasWork(creep) && hasCarry(creep);
-            if (isFillTask(t)) return hasCarry(creep);
+            if (isHarvestTask(t) && role === 'harvester') return hasWork(creep);
+            if (isBuildTask(t) && role === 'builder') return hasWork(creep) && hasCarry(creep);
+            if (isRepairTask(t) && role === 'repairer') return hasWork(creep) && hasCarry(creep);
+            if (isUpgradeTask(t) && role === 'upgrader') return hasWork(creep) && hasCarry(creep);
+            if (isFillTask(t) && role === 'lorry') return hasCarry(creep);
 
             // Allow any creep if type guard didn't match
             return true;

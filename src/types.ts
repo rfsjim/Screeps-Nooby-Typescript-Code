@@ -140,7 +140,8 @@ export interface BuildTask extends Task
 export interface UpgradeTask extends Task
 {
   type: 'upgrade';
-  targetId: Id<StructureController>; 
+  targetId: Id<StructureController>;
+  sourceId: Id<Source>; 
 }
 
 export interface RepairTask extends Task
@@ -209,6 +210,15 @@ export interface RoomMemory
       y: number;
     }
   };
+  mineral?:
+  {
+    [mineralId: string]:
+    {
+      x: number;
+      y: number;
+      type: string;
+    }
+  }
 }
 
 export interface CreepMemory

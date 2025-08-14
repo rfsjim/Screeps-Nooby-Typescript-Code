@@ -31,6 +31,7 @@ export function getRoomMemory(room: Room): RoomMemory
     if (memory.rcl === undefined) memory.rcl = room.controller?.level ?? -1;
     if (memory.spawns === undefined) memory.spawns = {};
     if (memory.sources === undefined) memory.sources = {};
+    if (memory.mineral === undefined) memory.mineral ={};
     return memory;
 }
 
