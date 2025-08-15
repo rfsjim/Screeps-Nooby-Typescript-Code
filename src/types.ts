@@ -233,3 +233,5 @@ export interface EnergyMinerMemory extends CreepMemory
 {
   sourceId: Id<Source>;
 }
+
+export type OwnerLike = { owner?: {username: string}};

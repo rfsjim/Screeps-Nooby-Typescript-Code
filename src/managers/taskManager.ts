@@ -86,7 +86,7 @@ function runCreep(creep: Creep, role: Role):void {
         (roomCreepCount['upgrader'] || 0) < maxUpgraders)
         {
             // Don't let harvesters stand around doing nothing, start to upgrade instead.
-            // retaskHarvesterToUpgrader(creep);
+            retaskHarvesterToUpgrader(creep);
         }
 
         if (role === 'upgrader' satisfies Role &&
@@ -94,8 +94,7 @@ function runCreep(creep: Creep, role: Role):void {
             (roomCreepCount["harvester"] || 0) < 3)
         {
             // Energy getting low in room? Convert back to harvester
-            // retaskUpgraderToHarvester(creep);
-            // console.log(`retasked - ${creep}`);
+            retaskUpgraderToHarvester(creep);
         }
     }
 
@@ -185,6 +184,7 @@ function cleanupMemory()
         mem.creepCounts = {};
 
         const creeps = room.find(FIND_MY_CREEPS);
+        if (creeps.length === 0) continue;
 
         for (const creep of creeps)
         {
