@@ -1,4 +1,4 @@
-import { HarvestableTarget, PickupTarget, WithdrawableTarget, Task, ResourceCollectionTask, HarvestTask, BuildTask, UpgradeTask, RepairTask, FillTask } from "types";
+import { HarvestableTarget, PickupTarget, WithdrawableTarget, Task, ResourceCollectionTask, HarvestTask, BuildTask, UpgradeTask, RepairTask, FillTask, OwnerLike } from "types";
 
 // Typeguards
 
@@ -215,4 +215,28 @@ export function isRoomStorageFull(room: Room): boolean
 {
   if (!room.controller || !room.controller.my ) return false;
   return (room.energyCapacityAvailable - room.energyAvailable) === 0; 
+}
+
+export function detectPlayerUsername(): string
+{
+  // Check structures first
+  for (const obj of Object.values(Game.structures) as OwnerLike[])
+  {
+    if (obj.owner?.username) return obj.owner.username;
+  }
+
+  // Then creeps
+  for (const obj of Object.values(Game.creeps) as OwnerLike[])
+  {
+    if (obj.owner?.username) return obj.owner.username;
+  }
+
+  // Finally construction sites
+  for (const obj of Object.values(Game.constructionSites) as OwnerLike[])
+  {
+    if (obj.owner?.username) return obj.owner.username;
+  }
+
+  // Otherwise name is unknown
+  return "Unknown";
 }

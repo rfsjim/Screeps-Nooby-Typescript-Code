@@ -4,8 +4,8 @@
     Starting 19th February 2023
     Last Updated 9th August 2025
 
-    Version:  0.0.7
-    Build:    37
+    Version:  0.0.8
+    Build:    38
 */
 
 // Import functions etc
@@ -13,6 +13,7 @@ import { getRoomMemory } from "managers/memoryManager";
 import { initRoom } from "init/initRoom";
 import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
+import { detectPlayerUsername } from "helper/helper";
 
 export const loop = () =>
 {
@@ -36,6 +37,11 @@ export const loop = () =>
 
     // manage spawning for each room
     manageSpawning(room);
+  }
+
+  if (!global.PLAYER_USERNAME)
+  {
+    global.PLAYER_USERNAME = detectPlayerUsername();
   }
   
   // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)

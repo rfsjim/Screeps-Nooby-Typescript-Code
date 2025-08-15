@@ -2,6 +2,7 @@
  * Control spawning of creeps
  */
 
+import { SOURCE_HARVEST_PARTS } from "consts";
 import { getCreepMemory, getInitialCreepMemory, getInitialEnergyMinerMemory, getRoomMemory } from "managers/memoryManager";
 import { Role, RoleComposition, RoomPhase } from "types";
 
@@ -51,34 +52,52 @@ export function manageSpawning(room: Room): void
     const spawn = Object.values(Game.spawns).filter(spawn => spawn.room.name === room.name)[0];
     if (!spawn) return;
 
-    const harvesters = Object.values(Game.creeps).filter((c) => (getCreepMemory(c)).role === 'harvester' satisfies Role);
-    const upgraders = Object.values(Game.creeps).filter((c) => (getCreepMemory(c)).role === 'upgrader' satisfies Role);
-
+    // TODO: Update to not hard code role types
+    const currRoles: Role[] = ['harvester', 'upgrader'];
     const roomMemory = getRoomMemory(room);
     if (!roomMemory) return;
-    const maxUpgraders = (room.controller.level + 1) | 1;
+    const roomPhase = roomMemory.phase;
 
-    if (!spawn.spawning)
+    /**
+     * A general creep at max size is 3000 energy,
+     * At RCL 7 extensions have 100 capacity each (50), spawns have 300 capacity each (2),
+     * From RCL 7 max room capacity is 5600 energy up to 12900 at RCL 8
+     * As an aside source in owned rooms is 3000 each (6000 total)
+     * At RCL8 must multiroom to fill energy capacity.
+     * Restricting maxEnergy to only the full room capacity size is wasteful
+     * At higher RCL due to lost time for maxEnergy to max out at max general creep size
+     * TODO: Dynamically allocate largest sized creep requirements instead of magic number
+     */
+    const maxEnergy = Math.min(room.energyCapacityAvailable, 3000);
+    let spawnEnergy;
+
+    if (roomPhase === RoomPhase.DeathSpiral) spawnEnergy = room.energyAvailable;
+    else spawnEnergy = maxEnergy;
+
+    // Unless DeathSpiral conditons, only spawn largest creeps available otherwise wait for energy to increase
+    if (room.energyAvailable < spawnEnergy) return;
+
+    for (const role of currRoles)
     {
-        if (harvesters.length < roomMemory.maxHarvesters)
+        const roleCount = Object.values(Game.creeps).filter((c) => (c.room === room && (getCreepMemory(c)).role === role)).length;
+
+        if (roleCount < getDesiredCountForRole(roomPhase, role))
+        {
+            if (!spawn.spawning)
             {
-                spawn.spawnCreep([WORK, CARRY, MOVE], `harvester-${Game.time}`, {
-                    memory: { role: "harvester", working: false}
-                });
-            } else if (upgraders.length < maxUpgraders)
-            {
-                spawn.spawnCreep([WORK, CARRY, MOVE], `upgrader - ${Game.time}`, {
-                    memory: {role: "upgrader", working: false}
-                });
+                if (buildCreep(role, spawn, spawnEnergy) !== OK) console.log(`Error spawning ${role}`);
             }
-    } else
-    {
-        const spawningCreep = Game.creeps[spawn.spawning.name];
-        spawn.room.visual.text(
-            '🛠️' + (getCreepMemory(spawningCreep)).role,
-            spawn.pos.x + 1,
-            spawn.pos.y,
-            {align: 'left', opacity: 0.8});
+            else
+            {
+                const spawningCreep = Game.creeps[spawn.spawning.name];
+                spawn.room.visual.text(
+                    '🛠️' + (getCreepMemory(spawningCreep)).role,
+                    spawn.pos.x + 1,
+                    spawn.pos.y,
+                    {align: 'left', opacity: 0.8}
+                );
+            }
+        }
     }
 }
 
@@ -120,6 +139,7 @@ function buildGeneralCreep(role: Role, spawn: StructureSpawn, energy: number): n
 {
     // each move is 50 energy, work is 100 energy, carry is 50 energy - four part group is 250 energy
     // spawn capacity is 300 energy
+    // max energy usage of a general creep is 50 parts / 4 part group (12) * 250 energy = 3,000 energy
     const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + (2 * BODYPART_COST[MOVE]);
     const maxNumberOfGroups = Math.floor(energy / partGroupCost);
     const partGroupCount = Math.min(maxNumberOfGroups, Math.floor(MAX_CREEP_SIZE/4));
@@ -165,10 +185,9 @@ function buildEnergyMinerCreep(sourceId: Id<Source>, spawn: StructureSpawn, ener
      * by RCL 3 max sized energy miner is available  (10 extensions & spawn)
      */
 
-    const maxWorkParts = 5;
     const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
     const maxNumberOfGroups = Math.floor(energy / partGroupCost);
-    const partGroupCount = Math.min(maxNumberOfGroups, maxWorkParts);
+    const partGroupCount = Math.min(maxNumberOfGroups, SOURCE_HARVEST_PARTS);
 
     if (partGroupCost < 1 )
     {
@@ -202,6 +221,7 @@ function buildLorryCreep(spawn: StructureSpawn, energy: number): number
      * Lorry has twice the move parts to carry parts
      * make sure that the lorry isn't too big (considering max size of 50 parts)
      * then build Lorry
+     * Max Energy usage of a Lorry is 50 parts / 3 -> 16 groups * 150 energy = 2,400 energy
      */
     // 
     // 

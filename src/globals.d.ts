@@ -7,6 +7,7 @@ declare global
   interface Global
   {
     allTasks: AnyTask[];
+    PLAYER_USERNAME: string;
   }
 
   interface Memory
