@@ -8,6 +8,7 @@ declare global
   {
     allTasks: AnyTask[];
     PLAYER_USERNAME: string;
+    distanceTransfrom: (roomName: string) => CostMatrix;
   }
 
   interface Memory

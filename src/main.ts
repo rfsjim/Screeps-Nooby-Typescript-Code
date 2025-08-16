@@ -14,6 +14,7 @@ import { initRoom } from "init/initRoom";
 import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
 import { detectPlayerUsername } from "helper/helper";
+import { getDistanceTransform } from "helper/util";
 
 export const loop = () =>
 {
@@ -42,6 +43,14 @@ export const loop = () =>
   if (!global.PLAYER_USERNAME)
   {
     global.PLAYER_USERNAME = detectPlayerUsername();
+  }
+
+  if (!global.distanceTransfrom)
+  {
+    global.distanceTransfrom = function (roomName: string)
+    {
+      return getDistanceTransform(roomName);
+    };
   }
   
   // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)

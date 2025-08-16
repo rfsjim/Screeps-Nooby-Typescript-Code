@@ -3,6 +3,7 @@
  * Quick and dirty upgrader to upgrade the controller in inital phase of the game 
  */
 
+import { signControllerIfNeeded } from "helper/helper";
 import { tryHarvest } from "./creepBehaviours";
 import { getCreepMemory, getRoomMemory } from "managers/memoryManager";
 
@@ -39,6 +40,10 @@ export function runUpgrader(creep: Creep)
             if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
             {
                 creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
+            }
+            else
+            {
+                signControllerIfNeeded(creep, controller);
             }
         }
     }
