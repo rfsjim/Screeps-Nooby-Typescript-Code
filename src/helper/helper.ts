@@ -1,4 +1,3 @@
-import { PLAYER_USERNAME } from "consts";
 import { HarvestableTarget, PickupTarget, WithdrawableTarget, Task, ResourceCollectionTask, HarvestTask, BuildTask, UpgradeTask, RepairTask, FillTask, OwnerLike } from "types";
 
 // Typeguards
@@ -211,13 +210,21 @@ function isDeposit(obj: unknown): obj is Deposit
   );
 }
 
-
+/**
+ * Check if room storage is full
+ * @param room 
+ * @returns 
+ */
 export function isRoomStorageFull(room: Room): boolean
 {
   if (!room.controller || !room.controller.my ) return false;
   return (room.energyCapacityAvailable - room.energyAvailable) === 0; 
 }
 
+/**
+ * Detects Player Username
+ * @returns 
+ */
 export function detectPlayerUsername(): string
 {
   // Check structures first
@@ -240,21 +247,4 @@ export function detectPlayerUsername(): string
 
   // Otherwise name is unknown
   return "Unknown";
-}
-
-export function signControllerIfNeeded(creep: Creep, controller: StructureController, text = "007 was here"): boolean
-{
-  // Skip hostile controllers
-  const ownerName = controller.owner?.username;
-  if (ownerName && ownerName !== PLAYER_USERNAME) return false;
-
-  // Only sign if text differs or no sign exists
-  if (controller.sign?.text !== text || controller.sign.username !== PLAYER_USERNAME)
-  {
-    const result = creep.signController(controller, text);
-    if (result === OK) return true;
-    else return false;
-  }
-
-  return false;
 }
