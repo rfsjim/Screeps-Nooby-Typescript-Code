@@ -302,5 +302,12 @@ Build an intel Memory module and use the data for expansion planning.
 
 #### Memory Structure
 
+## Debug / Room Visuals
+
+- Uniform Distance Transform
+At the console enable distance visuals with `Memory.debugVisuals = { roomName: "W0N0" }`
+That’ll make it redraw every tick until `delete Memory.debugVisuals`
+Also console command `getDistanceTransform("W0N0")`
+
 # Contains Legacy Code
 This repo includes a legacy JavaScript implementation stored in /legacy/. Please don’t judge me — I was young, and JavaScript let me get away with too much.

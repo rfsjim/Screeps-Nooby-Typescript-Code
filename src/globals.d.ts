@@ -8,12 +8,17 @@ declare global
   {
     allTasks: AnyTask[];
     PLAYER_USERNAME: string;
-    distanceTransfrom: (roomName: string) => CostMatrix;
+    distanceTransform: { [roomName: string]: CostMatrix };
+    getDistanceTransform(roomName: string): CostMatrix;
   }
 
   interface Memory
   {
     tasks: StoredTask[];
+    debugVisuals?:
+    {
+      roomName?: string;
+    };
   }
 
   // Get TypeScript to map that onto globalThis
