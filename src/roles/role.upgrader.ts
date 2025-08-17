@@ -3,8 +3,8 @@
  * Quick and dirty upgrader to upgrade the controller in inital phase of the game 
  */
 
-import { signControllerIfNeeded } from "helper/helper";
-import { tryHarvest } from "./creepBehaviours";
+import { PLAYER_USERNAME } from "consts";
+import { signControllerIfNeeded, tryHarvest } from "./creepBehaviours";
 import { getCreepMemory, getRoomMemory } from "managers/memoryManager";
 
 export function runUpgrader(creep: Creep)
@@ -36,14 +36,19 @@ export function runUpgrader(creep: Creep)
     } else
     {
         if (controller)
-        {
-            if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
+        { 
+            if (controller.sign === undefined || controller.sign?.text.length <= 0 || controller.sign.username !== PLAYER_USERNAME)
             {
-                creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
-            }
-            else
+                if (signControllerIfNeeded(creep, controller!))
+                {
+                    creep.moveTo(controller!, {visualizePathStyle: {stroke: '#8B0000'}})
+                }
+            } else
             {
-                signControllerIfNeeded(creep, controller);
+                 if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
+                {
+                    creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
+                }
             }
         }
     }
