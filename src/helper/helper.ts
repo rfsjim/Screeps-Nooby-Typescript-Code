@@ -248,3 +248,49 @@ export function detectPlayerUsername(): string
   // Otherwise name is unknown
   return "Unknown";
 }
+
+/**
+ * Convert a RoomPosition or {x, y} into CostMatrix index
+ * @param pos 
+ * @returns 
+ */
+export function getCostMaxtrixIndexFromPOS(pos: RoomPosition | {x: number, y: number}): number
+{
+  return pos.y * 50 + pos.x;
+}
+
+/**
+ * Gets the x and y co-ords from a given cost matrix index
+ * @param index 
+ * @returns x and y coords
+ */
+export function getXYfromCostMaxtrixIndex(index: number): {x: number, y: number}
+{
+  return {
+    x: index % 50,
+    y: Math.floor(index / 50)
+  }; 
+}
+
+/**
+ * Wrapper to get a CostMatrix value by RoomPosition or {x,y}
+ * @param CostMatrix 
+ * @param pos 
+ * @returns CostMatrix at position
+ */
+export function getCostAt(costMatrix: CostMatrix, pos: RoomPosition | {x: number, y: number}): number
+{
+  return costMatrix.get(pos.x, pos.y);
+}
+
+/**
+ * Wrapper to set a CostMatrix value with RoomPosition or {x,y} and cost
+ * @param costMatrix 
+ * @param pos 
+ * @param cost 
+ */
+export function setCostAt(costMatrix: CostMatrix, pos: RoomPosition | {x: number, y: number}, cost: number): void
+{
+  costMatrix.set(pos.x, pos.y, cost);
+}
+

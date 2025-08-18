@@ -112,6 +112,8 @@ export function getDistanceTransform(roomName: string): CostMatrix
         }
     }
 
+    console.log(`Max Distance in room ${roomName} - ${maxDistance}`);
+
     return costs;
 }
 
@@ -138,4 +140,46 @@ function neighbourDistance(costs: CostMatrix, x: number, y: number, dx: number, 
     if (neighbour === undefined) return 100;
 
     return neighbour + 1;
+}
+
+
+export function drawDebugVisuals()
+{
+    if (!Memory.debugVisuals?.roomName) return;
+
+    const roomName = Memory.debugVisuals.roomName;
+    const terrain = new Room.Terrain(roomName);
+
+    const costs = global.distanceTransform[roomName] ?? getDistanceTransform(roomName);
+
+    const roomVisual = new RoomVisual(roomName);
+
+    let maxDistance = 0;
+    for (let x = ROOM_BOUNDARY_VALUES.minX; x < ROOM_BOUNDARY_VALUES.maxX; x++)
+    {
+        for (let y = ROOM_BOUNDARY_VALUES.minY; y < ROOM_BOUNDARY_VALUES.maxY; y++)
+        {
+            if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+            const cost = costs.get(x, y);
+            maxDistance = Math.max(maxDistance, cost);
+        }
+    }
+
+    for (let x = ROOM_BOUNDARY_VALUES.minX; x < ROOM_BOUNDARY_VALUES.maxX; x++)
+    {
+        for (let y = ROOM_BOUNDARY_VALUES.minY; y < ROOM_BOUNDARY_VALUES.maxY; y++)
+        {
+            if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+
+            const cost = costs.get(x, y);
+            if (cost === 0) continue;
+
+            const hue = 180 * (Math.sqrt(cost / maxDistance));
+            const colour = `hsl(${hue},100%,60%)`;
+
+            roomVisual.text(`${cost}`, x, y);
+            roomVisual.rect(x - 0.5, y - 0.5, 1, 1, { fill: colour, opacity: 0.4 });
+        }
+    }
 }

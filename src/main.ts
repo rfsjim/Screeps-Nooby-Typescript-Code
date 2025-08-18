@@ -14,7 +14,8 @@ import { initRoom } from "init/initRoom";
 import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
 import { detectPlayerUsername } from "helper/helper";
-import { getDistanceTransform } from "helper/util";
+import { drawDebugVisuals, getDistanceTransform } from "helper/util";
+import { bunkerBuilder } from "managers/buildingManager";
 
 export const loop = () =>
 {
@@ -45,13 +46,21 @@ export const loop = () =>
     global.PLAYER_USERNAME = detectPlayerUsername();
   }
 
-  if (!global.distanceTransfrom)
+  if (!global.distanceTransform)
   {
-    global.distanceTransfrom = function (roomName: string)
-    {
-      return getDistanceTransform(roomName);
-    };
+    global.distanceTransform = {};
   }
+  
+  global.getDistanceTransform = function (roomName: string): CostMatrix
+  {
+    if (!global.distanceTransform[roomName])
+    {
+      global.distanceTransform[roomName] = getDistanceTransform(roomName);
+    }
+    return global.distanceTransform[roomName];
+  };
+
+  if (Memory.debugVisuals?.roomName) drawDebugVisuals();
   
   // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
   // {

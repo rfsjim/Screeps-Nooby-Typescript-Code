@@ -37,19 +37,23 @@ export function runUpgrader(creep: Creep)
     {
         if (controller)
         { 
-            if (controller.sign === undefined || controller.sign?.text.length <= 0 || controller.sign.username !== PLAYER_USERNAME)
+            if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
             {
-                if (signControllerIfNeeded(creep, controller!))
-                {
-                    creep.moveTo(controller!, {visualizePathStyle: {stroke: '#8B0000'}})
-                }
-            } else
-            {
-                 if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
-                {
-                    creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
-                }
+                creep.moveTo(controller!, {visualizePathStyle: {stroke: '#8B0000'}});
             }
+            // if (controller.sign === undefined || controller.sign?.text.length <= 0 || controller.sign.username !== PLAYER_USERNAME)
+            // {
+            //     if (signControllerIfNeeded(creep, controller!))
+            //     {
+            //         creep.moveTo(controller!, {visualizePathStyle: {stroke: '#8B0000'}});
+            //     }
+            // } else
+            // {
+            //      if (creep.upgradeController(controller!) === ERR_NOT_IN_RANGE)
+            //     {
+            //         creep.moveTo(controller!, {visualizePathStyle: {stroke: '#ffffff'}});
+            //     }
+            // }
         }
     }
 }
