@@ -15,6 +15,7 @@ import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
 import { detectPlayerUsername } from "helper/helper";
 import { drawDebugVisuals, getDistanceTransform } from "helper/util";
+import { bunkerBuilder } from "managers/buildingManager";
 
 export const loop = () =>
 {
