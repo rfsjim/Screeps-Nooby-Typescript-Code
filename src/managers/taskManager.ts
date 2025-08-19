@@ -636,6 +636,7 @@ export const taskManager =
             const roomEnergyNetFlow = roomSustainability.getNetFlow(room);
 
             if (roomEnergyNetFlow < 0) mem.phase = RoomPhase.DeathSpiral;
+            if (mem.rcl !== room.controller?.level) mem.rcl = room.controller?.level ?? 0;
         }
 
         // Assign Tasks to Idle or Completed Creeps

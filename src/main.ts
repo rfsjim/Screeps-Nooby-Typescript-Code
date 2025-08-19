@@ -24,23 +24,7 @@ export const loop = () =>
     throw new Error('Extremely low bucket - aborting script run at top level')
   }
 
-  taskManager.run();
-
-  for (const roomName in Game.rooms)
-  {
-    const room = Game.rooms[roomName];
-
-    // init memory for room
-    const memory = getRoomMemory(room);
-    if (!memory) continue;
-
-    // find and track sources
-    if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);
-
-    // manage spawning for each room
-    manageSpawning(room);
-  }
-
+  // setup globals
   if (!global.PLAYER_USERNAME)
   {
     global.PLAYER_USERNAME = detectPlayerUsername();
@@ -61,7 +45,26 @@ export const loop = () =>
   };
 
   if (Memory.debugVisuals?.roomName) drawDebugVisuals();
-  
+
+  taskManager.run();
+
+  for (const roomName in Game.rooms)
+  {
+    const room = Game.rooms[roomName];
+
+    // init memory for room
+    const memory = getRoomMemory(room);
+    if (!memory) continue;
+
+    // find and track sources
+    if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);
+
+    if (room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) bunkerBuilder(roomName, 10);
+
+    // manage spawning for each room
+    manageSpawning(room);
+  }
+
   // if (Game.cpu.bucket >= 10000 && getRoomPhase(Game.rooms[0]) > 0)
   // {
   //   Game.cpu.generatePixel();
