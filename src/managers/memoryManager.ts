@@ -22,9 +22,12 @@ export function getRoomMemory(room: Room): RoomMemory
     
     const memory = room.memory as RoomMemory;
     
+    if (memory.constructionSites === undefined) memory.constructionSites = {};
     if (!memory.controllerProgress) memory.controllerProgress = {level: 0, totalEnergyHarvested: 0};
     if (memory.creepCounts === undefined) memory.creepCounts = {};
     if (memory.creeps === undefined) memory.creeps = {};
+    if (memory.extensions === undefined) memory.extensions = room.find(FIND_STRUCTURES, {
+      filter: (structure) => structure.structureType === STRUCTURE_EXTENSION}).length;
     if (memory.maxHarvesters === undefined) memory.maxHarvesters = 0;
     if (memory.owner === undefined) memory.owner = room.controller?.owner ?? 'None'
     if (memory.phase === undefined) memory.phase = RoomPhase.UnitiatedRoom;
@@ -113,7 +116,7 @@ export function getRoomPhase(room: Room): RoomPhase {
   if (rcl < 1) phase = RoomPhase.UnitiatedRoom;
   else if (isEmergency) phase = RoomPhase.DeathSpiral;
   else if (rcl < 2) phase = RoomPhase.InitialBootstrap;
-  else if (rcl === 2 && !hasStorage) phase = RoomPhase.StableEarlyGame;
+  else if (rcl >= 2 && !hasStorage) phase = RoomPhase.StableEarlyGame;
   else if (rcl >= 4 && hasStorage) phase = RoomPhase.MidGame;
   else if (rcl >= 6 && room.terminal) phase = RoomPhase.NearMax;
   else if (rcl === 8) phase = RoomPhase.MaxSingleRoom;
