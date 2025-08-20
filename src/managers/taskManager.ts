@@ -134,6 +134,18 @@ function retaskUpgraderToHarvester(creep: Creep): void
 }
 
 /**
+ * Swap role of harvester to builder
+ * @param creep 
+ */
+function retaskCreepToBuilder(creep: Creep): void
+{
+    const memory = getCreepMemory(creep);
+
+    memory.role = 'builder' satisfies Role;
+    memory.lastRoleChange = Game.time;
+}
+
+/**
  * Decide if room controller should be upgraded
  * @param currentLevel 
  * @returns 
@@ -233,6 +245,31 @@ function taskExists(type: TaskType, targetId: Id<_HasId>): boolean
 }
 
 /**
+ * Gets Construction Site from Queue of Construction Sites
+ * @param room 
+ * @returns id of construction site
+ */
+function getNextConstructionSiteId(room: Room): Id<ConstructionSite> | null
+{
+    const mem = getRoomMemory(room);
+
+    if (!mem.constructionSites || !mem.constructionQueue) return null;
+
+    while (mem.constructionQueue.length > 0)
+    {
+        const id = mem.constructionQueue[0] as Id<ConstructionSite>;
+        const site = Game.getObjectById(id);
+        if (site) return id;
+
+        // cleanup invalid
+        mem.constructionQueue.shift();
+        delete mem.constructionSites[id];
+    }
+
+    return null;
+}
+
+/**
  * Create Task that can be overriden with required parameters
  * @param type 
  * @param data 
@@ -271,10 +308,14 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
 
     if (roomMemory.phase === RoomPhase.UnitiatedRoom) getRoomPhase(room);
 
+    const nextConstructionSiteId = getNextConstructionSiteId(room);
+
     let newTasks: AnyTask[] = [];     // A list of tasks to start creep doing something in room
 
     switch (roomMemory.phase) {
         case RoomPhase.DeathSpiral:
+            // Have less than 100 energy in the room and 1 or less creeps in room
+            // Make harvesters
             for (const source of Object.keys(roomMemory.sources))
             {
                 const resourceType = getResourceTypeFromId(source as Id<Source>);
@@ -300,6 +341,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
             }
             break;
         case RoomPhase.InitialBootstrap:
+            // RCL is less than two
             for (const source of Object.keys(roomMemory.sources))
             {
                 const resourceType = getResourceTypeFromId(source as Id<Source>);
@@ -339,6 +381,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
             }
             break;
         case RoomPhase.StableEarlyGame:
+            // RCL Greater than or equal to 2 and no storage
             for (const source of Object.keys(roomMemory.sources))
             {
                 const resourceType = getResourceTypeFromId(source as Id<Source>);
@@ -372,6 +415,20 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                         status: "untasked",
                         sourceId: source as Id<Source>
                     }));
+                }
+                if ((roomMemory.constructionQueue) && (roomMemory.constructionQueue?.length > 0) &&
+                    (nextConstructionSiteId) &&
+                    (!taskExists("build", nextConstructionSiteId)))
+                {
+                    newTasks.push(createTask(
+                        "build",
+                        {
+                            id: `build-${nextConstructionSiteId}`,
+                            maxCreeps: getDesiredCountForRole(roomMemory.phase, 'builder'),
+                            targetId: nextConstructionSiteId,
+                            status: "untasked",
+                            sourceId: source as Id<Source>
+                        }));
                 }
             }
             break;
@@ -630,13 +687,41 @@ export const taskManager =
             const mem = getRoomMemory(room);
             if (!mem) continue;
             
-            createTasks(room, tasks);
-
             const roomSustainability = new SustainabilityPlanner();
             const roomEnergyNetFlow = roomSustainability.getNetFlow(room);
 
             if (roomEnergyNetFlow < 0) mem.phase = RoomPhase.DeathSpiral;
+            
             if (mem.rcl !== room.controller?.level) mem.rcl = room.controller?.level ?? 0;
+            if (!mem.controllerProgress) mem.controllerProgress =
+            {
+                level: room.controller?.level ?? 0,
+                totalEnergyHarvested: 0
+            };
+            if (mem.controllerProgress?.level === undefined) continue;
+            if (mem.controllerProgress?.level !== room.controller?.level) mem.controllerProgress.level = room.controller?.level ?? 0;
+
+            mem.phase = getRoomPhase(room);
+
+            createTasks(room, tasks);
+
+            if (mem.constructionQueue && mem.constructionQueue.length > 0 && mem.creepCounts.harvester > 2) 
+            {
+                let count = 0;
+                for (const creepName in Game.creeps)
+                {
+                    const creep = Game.creeps[creepName];
+                    if (!creep) continue;
+                    const creepMemory = getCreepMemory(creep);
+
+                    if (creepMemory.role == 'harvester' && count === 0)
+                    {
+                        count++;
+                        retaskCreepToBuilder(creep);
+                        if (creepMemory.task) creepMemory.task.status = 'completed';
+                    }
+                }
+            }
         }
 
         // Assign Tasks to Idle or Completed Creeps
@@ -651,7 +736,7 @@ export const taskManager =
                 const task = global.allTasks.find(
                     t => t.id === mem.task?.id);
                 if (task) task.status = 'hand_over';
-            } 
+            }
 
             if (mem.task === undefined || mem.task.status === 'completed' || mem.task.status === 'error')
             {

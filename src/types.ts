@@ -133,6 +133,7 @@ export interface HarvestTask extends Task
 
 export interface BuildTask extends Task
 {
+  sourceId: Id<Source>;
   type: 'build';
   targetId: Id<ConstructionSite>;
 }
@@ -170,6 +171,16 @@ export interface NoneTask extends Task
 
 export interface RoomMemory
 {
+  constructionSites?:
+  {
+    [id: string]:
+    {
+      x: number,
+      y: number,
+      type: BuildableStructureConstant
+    };
+  };
+  constructionQueue?: string[];
   controllerProgress?:
   {
     level: number;
@@ -188,6 +199,7 @@ export interface RoomMemory
     [role: string]: number;
   };
   exits:Partial<Record<ExitKey, string>>;
+  extensions?: number;
   lastCleanupTick?: number;
   maxHarvesters: number;
   owner: Owner | string,
