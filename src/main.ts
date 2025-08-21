@@ -2,10 +2,10 @@
     Typescript Screeps Code for Noobs
 
     Starting 19th February 2023
-    Last Updated 9th August 2025
+    Last Updated 21st August 2025
 
-    Version:  0.0.8
-    Build:    38
+    Version:  0.0.10
+    Build:    45
 */
 
 // Import functions etc
@@ -59,7 +59,7 @@ export const loop = () =>
     // find and track sources
     if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);
 
-    if (room.find(FIND_MY_CONSTRUCTION_SITES).length === 0) bunkerBuilder(roomName, 10);
+    if (!memory.constructionQueue || memory.constructionQueue.length === 0) bunkerBuilder(roomName, 10);
 
     // manage spawning for each room
     manageSpawning(room);
