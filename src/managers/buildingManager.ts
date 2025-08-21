@@ -12,8 +12,10 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
     if (roomMaxlocationDistance < 7) return false;  // room not big enough for bunkers
 
     const roomMemory = getRoomMemory(Game.rooms[roomName]);
+    if (roomMemory.constructionQueue && roomMemory.constructionQueue.length > 0) return false; // Have unbuilt construction sites don't queue up more
+
     if (!roomMemory.spawns) return false;  // if room has no spawn then we dont need to be building
-    if (roomMemory.rcl < 2) return false;  // earliest time we can have extensions 
+    if (roomMemory.rcl < 2) return false;  // earliest time we can have extensions
 
     const initalSpawn = Object.keys(roomMemory.spawns)[0]; // get first spawn created in room as anchor for bunker
     if (!initalSpawn) return false;
@@ -69,23 +71,20 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
             for (const {x , y} of offsets)
             {
                 const pos = new RoomPosition(extensionAnchor.x + x, extensionAnchor.y + y, roomName);
-                if (!placeConstructionSite(pos, STRUCTURE_EXTENSION, pos.roomName)) return false;
-
-                for (const site of Game.rooms[roomName].lookForAt(LOOK_CONSTRUCTION_SITES, pos))
+                if (placeConstructionSite(pos, STRUCTURE_EXTENSION, pos.roomName) === OK) return true;
+                else
                 {
-                    if (roomMemory.constructionSites === undefined) roomMemory.constructionSites = {};
-
-                    roomMemory.constructionSites[site.id] =
-                    {
-                        x: site.pos.x,
-                        y: site.pos.y,
-                        type: site.structureType,
-                    };
-                    roomMemory.constructionQueue?.push(site.id);
-                    console.log(`Found site ${site.id} at (${site.pos.x}, ${site.pos.y}) for ${site.structureType}`);
-                }
+                    scanConstructionsSites(
+                        Game.rooms[roomName],
+                        {
+                            x1: testPos.x -7,
+                            y1: testPos.y - 7,
+                            x2: testPos.x + 7,
+                            y2: testPos.y + 7
+                        });
+                    return false;
+                } 
             }
-            return true;
         }
     }
     return false;
@@ -96,19 +95,19 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
  * @param roomPosition 
  * @param structureType 
  * @param roomName 
- * @returns 
+ * @returns ScreepReturnConstant
  */
-function placeConstructionSite(roomPosition: RoomPosition, structureType: BuildableStructureConstant, roomName: string):boolean
+function placeConstructionSite(roomPosition: RoomPosition, structureType: BuildableStructureConstant, roomName: string):ScreepsReturnCode
 {
     const roomMemory = getRoomMemory(Game.rooms[roomName]);
-    if (!roomMemory) return false;
+    if (!roomMemory) return ERR_INVALID_ARGS;
 
     const result = roomPosition.createConstructionSite(structureType);
 
     if (result !== OK)
     {
         console.log(`Failed to place ${structureType} at ${roomPosition}: ${result}`);
-        return false;
+        return result;
     }
  
     if (structureType === STRUCTURE_EXTENSION)
@@ -117,5 +116,25 @@ function placeConstructionSite(roomPosition: RoomPosition, structureType: Builda
         roomMemory.extensions++;
     }
 
-    return true;
+    return OK;
+}
+
+function scanConstructionsSites(room: Room, area: {x1: number, y1: number, x2: number, y2: number})
+{
+    const sites = room.lookForAtArea(LOOK_CONSTRUCTION_SITES, area.y1, area.x1, area.y2, area.x2, true);
+    const roomMemory = getRoomMemory(room);
+
+    for (const site of sites)
+    {
+        if (roomMemory.constructionSites === undefined) roomMemory.constructionSites = {};
+
+        roomMemory.constructionSites[site.constructionSite.id] =
+        {
+            x: site.x,
+            y: site.y,
+            type: site.constructionSite.structureType,
+        };
+        roomMemory.constructionQueue?.push(site.constructionSite.id);
+        console.log(`Found site ${site.constructionSite.id} at (${site.x}, ${site.y}) for ${site.constructionSite.structureType}`);
+    }
 }
