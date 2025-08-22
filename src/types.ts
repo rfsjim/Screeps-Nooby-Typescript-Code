@@ -199,7 +199,6 @@ export interface RoomMemory
     [role: string]: number;
   };
   exits:Partial<Record<ExitKey, string>>;
-  extensions?: number;
   lastCleanupTick?: number;
   maxHarvesters: number;
   owner: Owner | string,

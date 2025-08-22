@@ -5,7 +5,7 @@
     Last Updated 21st August 2025
 
     Version:  0.0.10
-    Build:    45
+    Build:    46
 */
 
 // Import functions etc
@@ -59,7 +59,7 @@ export const loop = () =>
     // find and track sources
     if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);
 
-    if (!memory.constructionQueue || memory.constructionQueue.length === 0) bunkerBuilder(roomName, 10);
+    if ((!memory.constructionSites || Object.keys(memory.constructionSites).length === 0)) bunkerBuilder(roomName, 10);
 
     // manage spawning for each room
     manageSpawning(room);

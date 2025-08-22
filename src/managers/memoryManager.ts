@@ -23,11 +23,10 @@ export function getRoomMemory(room: Room): RoomMemory
     const memory = room.memory as RoomMemory;
     
     if (memory.constructionSites === undefined) memory.constructionSites = {};
+    if (memory.constructionQueue === undefined) memory.constructionQueue = [];
     if (!memory.controllerProgress) memory.controllerProgress = {level: 0, totalEnergyHarvested: 0};
     if (memory.creepCounts === undefined) memory.creepCounts = {};
     if (memory.creeps === undefined) memory.creeps = {};
-    if (memory.extensions === undefined) memory.extensions = room.find(FIND_STRUCTURES, {
-      filter: (structure) => structure.structureType === STRUCTURE_EXTENSION}).length;
     if (memory.maxHarvesters === undefined) memory.maxHarvesters = 0;
     if (memory.owner === undefined) memory.owner = room.controller?.owner ?? 'None'
     if (memory.phase === undefined) memory.phase = RoomPhase.UnitiatedRoom;
