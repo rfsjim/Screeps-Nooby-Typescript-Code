@@ -121,13 +121,14 @@ export function getMaximumRoomEnergy(room: Room): number
  * Cleanup dead creeps and rebuild Memory.room memory.
  * This doesn’t need to run every tick to conserve CPU.
  */
-
 function cleanupMemory()
 {
     for (const name in Memory.creeps)
     {
         if (!(name in Game.creeps))
         {
+            console.log(`[${Game.creeps[name].room.name}] ${name} has died`);
+            
             delete Memory.creeps[name];
         }
     }

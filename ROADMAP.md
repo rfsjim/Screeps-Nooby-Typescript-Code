@@ -11,8 +11,8 @@
 - [x] Spawn basic creeps: `harvester`, `upgrader`, `builder`
 - [x] Harvest from nearest source
 - [x] Upgrade controller
-- [ ] Simple build logic
-- [ ] Creep lifecycle logging
+- [x] Simple build logic
+- [x] Creep lifecycle logging
 - [x] Basic memory structure and cleanup
 
 ---
