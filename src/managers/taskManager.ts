@@ -9,6 +9,7 @@ import { HANDOVER_TTL_THRESHOLD } from "consts";
 import { getDesiredCountForRole } from "./spawnManager";
 import { runHarvester } from "roles/role.harvester";
 import { runUpgrader } from "roles/role.upgrader";
+import { runBuilder } from "roles/role.builder";
 
 /**
  * Type Safe Ensure Global Tasks
@@ -50,7 +51,7 @@ const taskToRoleMap: Record<TaskType, Role> =
 export const roleRunners: Record<Role, (creep: Creep) => void> = {
   harvester: runHarvester,
   upgrader: runUpgrader,
-  builder: () => {},
+  builder: runBuilder,
   energyMiner: () => {},
   lorry: () => {},
   repairer: () => {},
@@ -66,38 +67,7 @@ export const roleRunners: Record<Role, (creep: Creep) => void> = {
  */
 function runCreep(creep: Creep, role: Role):void {
     if (!creep) return;
-    const mem = getCreepMemory(creep);
-
-    // Reassignment logic (e.g., upgrade harvester to upgrader if storage is full) and cooldown has passed
-    const cooldownTicks = 25;
-    const canSwitch = !mem.lastRoleChange || Game.time - mem.lastRoleChange > cooldownTicks;
-
-    if ((role === 'harvester' || role === 'upgrader') && canSwitch)
-    {
-        const room = creep.room;
-        const roomMemory = getRoomMemory(room);
-        if (!roomMemory) return;
-        const roomCreepCount = roomMemory.creepCounts || {};
-
-        const maxUpgraders = room.controller ? room.controller.level : 1;
-
-        if (role === 'harvester' satisfies Role &&
-            room.energyAvailable === room.energyCapacityAvailable &&
-        (roomCreepCount['upgrader'] || 0) < maxUpgraders)
-        {
-            // Don't let harvesters stand around doing nothing, start to upgrade instead.
-            retaskHarvesterToUpgrader(creep);
-        }
-
-        if (role === 'upgrader' satisfies Role &&
-            creep.room.energyAvailable < creep.room.energyCapacityAvailable * 0.5 &&
-            (roomCreepCount["harvester"] || 0) < 3)
-        {
-            // Energy getting low in room? Convert back to harvester
-            retaskUpgraderToHarvester(creep);
-        }
-    }
-
+    
     const runner = roleRunners[role];
 
     if (!runner)
@@ -110,30 +80,6 @@ function runCreep(creep: Creep, role: Role):void {
 } 
 
 /**
- * Swap role of harvester to upgrader
- * @param creep 
- */
-function retaskHarvesterToUpgrader(creep: Creep): void
-{
-    const memory = getCreepMemory(creep);
-
-    memory.role = 'upgrader' satisfies Role;
-    memory.lastRoleChange = Game.time;
-}
-
-/**
- * Swap role of upgrader to harvester
- * @param creep 
- */
-function retaskUpgraderToHarvester(creep: Creep): void
-{
-    const memory = getCreepMemory(creep);
-
-    memory.role = 'harvester' satisfies Role;
-    memory.lastRoleChange = Game.time;
-}
-
-/**
  * Swap role of harvester to builder
  * @param creep 
  */
@@ -141,7 +87,7 @@ function retaskCreepToBuilder(creep: Creep): void
 {
     const memory = getCreepMemory(creep);
 
-    memory.role = 'builder' satisfies Role;
+    // memory.role = 'builder' satisfies Role;
     memory.lastRoleChange = Game.time;
 }
 
@@ -330,7 +276,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     newTasks.push(createTask(
                     "harvest",
                     {
-                        id: `harvest-${source}-${Game.time}`,
+                        id: `harvest-${source}`,
                         maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
                         targetId: source as Id<Source>,
                         method: ResourceAcquisitionMethod.Harvest,
@@ -357,7 +303,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     newTasks.push(createTask(
                     "harvest",
                     {
-                        id: `harvest-${source}-${Game.time}`,
+                        id: `harvest-${source}`,
                         maxCreeps: roomMemory.maxHarvesters / Object.keys(roomMemory.sources).length,
                         targetId: source as Id<Source>,
                         method: ResourceAcquisitionMethod.Harvest,
@@ -371,7 +317,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     newTasks.push(createTask(
                     "upgrade",
                     {
-                        id: `upgrade-${Game.time}`,
+                        id: `upgrade-${room.controller.id}`,
                         maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
                         targetId: room.controller.id,
                         status: "untasked",
@@ -391,12 +337,12 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     continue;
                 }
                 if (isRoomStorageFull(room)) continue;
-                if (taskExists("harvest", source as Id<Source>))
+                if (!taskExists("harvest", source as Id<Source>))
                 {
                     newTasks.push(createTask(
                     "harvest",
                     {
-                    id: `energyMiner-${source}-${Game.time}`,
+                    id: `harvest-${source}`,
                     maxCreeps: 1,
                     targetId: source as Id<Source>,
                     method: ResourceAcquisitionMethod.Harvest,
@@ -409,7 +355,7 @@ function createTasks(room: Room, tasks: AnyTask[]): AnyTask[] | undefined
                     newTasks.push(createTask(
                     "upgrade",
                     {
-                        id: `upgrade-${Game.time}`,
+                        id: `upgrade-${room.controller.id}`,
                         maxCreeps: getDesiredCountForRole(roomMemory.phase, 'upgrader'),
                         targetId: room.controller.id,
                         status: "untasked",
@@ -701,7 +647,7 @@ export const taskManager =
             if (mem.controllerProgress?.level === undefined) continue;
             if (mem.controllerProgress?.level !== room.controller?.level) mem.controllerProgress.level = room.controller?.level ?? 0;
 
-            mem.phase = getRoomPhase(room);
+            if (Game.time % 500 === 0) mem.phase = getRoomPhase(room);
 
             createTasks(room, tasks);
 

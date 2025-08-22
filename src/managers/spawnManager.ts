@@ -9,9 +9,9 @@ import { Role, RoleComposition, RoomPhase } from "types";
 export const desiredCreepsByName: Record<keyof typeof RoomPhase, RoleComposition> =
 {
     UnitiatedRoom: {},
-    DeathSpiral: {harvester : 2},
-    InitialBootstrap: {harvester : 3, upgrader: 1},
-    StableEarlyGame: {energyMiner : 2, upgrader: 2},
+    DeathSpiral: {harvester : 2}, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
+    InitialBootstrap: {harvester : 3, upgrader: 1}, // RCL is less than two
+    StableEarlyGame: {energyMiner : 2, upgrader: 2, builder: 1}, // RCL Greater than or equal to 2 and no storage
     MidGame: {energyMiner: 2, upgrader: 2, builder: 1, lorry: 2},
     NearMax: {energyMiner: 2, upgrader: 3, builder: 2, lorry: 2, repairer: 1},
     MaxSingleRoom: {energyMiner: 2, upgrader: 1, lorry: 3, repairer: 2},
@@ -21,9 +21,9 @@ export const desiredCreepsByName: Record<keyof typeof RoomPhase, RoleComposition
 const desiredCreeps: Record<RoomPhase, RoleComposition> =
 {
     [RoomPhase.UnitiatedRoom]: {},
-    [RoomPhase.DeathSpiral]: {harvester : 2},
-    [RoomPhase.InitialBootstrap]: {harvester : 3, upgrader: 1},
-    [RoomPhase.StableEarlyGame]: {energyMiner : 2, upgrader: 2},
+    [RoomPhase.DeathSpiral]: {harvester : 2}, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
+    [RoomPhase.InitialBootstrap]: {harvester : 3, upgrader: 1}, // RCL is less than two
+    [RoomPhase.StableEarlyGame]: {energyMiner : 2, upgrader: 2, builder: 1}, // RCL Greater than or equal to 2 and no storage
     [RoomPhase.MidGame]: {energyMiner: 2, upgrader: 2, builder: 1, lorry: 2},
     [RoomPhase.NearMax]: {energyMiner: 2, upgrader: 3, builder: 2, lorry: 2, repairer: 1},
     [RoomPhase.MaxSingleRoom]: {energyMiner: 2, upgrader: 1, lorry: 3, repairer: 2},
@@ -53,7 +53,7 @@ export function manageSpawning(room: Room): void
     if (!spawn) return;
 
     // TODO: Update to not hard code role types
-    const currRoles: Role[] = ['harvester', 'upgrader'];
+    const currRoles: Role[] = ['harvester', 'upgrader', 'builder'];
     const roomMemory = getRoomMemory(room);
     if (!roomMemory) return;
     const roomPhase = roomMemory.phase;

@@ -12,7 +12,7 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
     if (roomMaxlocationDistance < 7) return false;  // room not big enough for bunkers
 
     const roomMemory = getRoomMemory(Game.rooms[roomName]);
-    if (roomMemory.constructionQueue && roomMemory.constructionQueue.length > 0) return false; // Have unbuilt construction sites don't queue up more
+    if (roomMemory.constructionSites && Object.keys(roomMemory.constructionSites).length > 0) return false; // Have unbuilt construction sites don't queue up more
 
     if (!roomMemory.spawns) return false;  // if room has no spawn then we dont need to be building
     if (roomMemory.rcl < 2) return false;  // earliest time we can have extensions
@@ -71,8 +71,7 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
             for (const {x , y} of offsets)
             {
                 const pos = new RoomPosition(extensionAnchor.x + x, extensionAnchor.y + y, roomName);
-                if (placeConstructionSite(pos, STRUCTURE_EXTENSION, pos.roomName) === OK) return true;
-                else
+                if (placeConstructionSite(pos, STRUCTURE_EXTENSION, pos.roomName) !== OK)
                 {
                     scanConstructionsSites(
                         Game.rooms[roomName],
@@ -82,7 +81,6 @@ export function bunkerBuilder(roomName: string, roomMaxlocationDistance: number)
                             x2: testPos.x + 7,
                             y2: testPos.y + 7
                         });
-                    return false;
                 } 
             }
         }
@@ -109,12 +107,6 @@ function placeConstructionSite(roomPosition: RoomPosition, structureType: Builda
         console.log(`Failed to place ${structureType} at ${roomPosition}: ${result}`);
         return result;
     }
- 
-    if (structureType === STRUCTURE_EXTENSION)
-    {
-        if (roomMemory.extensions === undefined) roomMemory.extensions = 0;
-        roomMemory.extensions++;
-    }
 
     return OK;
 }
@@ -134,7 +126,8 @@ function scanConstructionsSites(room: Room, area: {x1: number, y1: number, x2: n
             y: site.y,
             type: site.constructionSite.structureType,
         };
-        roomMemory.constructionQueue?.push(site.constructionSite.id);
+        if (roomMemory.constructionQueue === undefined) roomMemory.constructionQueue = [];
+        roomMemory.constructionQueue.push(site.constructionSite.id);
         console.log(`Found site ${site.constructionSite.id} at (${site.x}, ${site.y}) for ${site.constructionSite.structureType}`);
     }
 }
