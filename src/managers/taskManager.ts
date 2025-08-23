@@ -127,8 +127,6 @@ function cleanupMemory()
     {
         if (!(name in Game.creeps))
         {
-            console.log(`[${Game.creeps[name].room.name}] ${name} has died`);
-            
             delete Memory.creeps[name];
         }
     }
@@ -209,7 +207,14 @@ function getNextConstructionSiteId(room: Room): Id<ConstructionSite> | null
         if (site) return id;
 
         // cleanup invalid
-        mem.constructionQueue.shift();
+        for (let i = 0; i < mem.constructionQueue.length; i++)
+        {
+            if (mem.constructionQueue[i] === id)
+            {
+                mem.constructionQueue.splice(i, 1);
+            }
+        }
+        
         delete mem.constructionSites[id];
     }
 
@@ -648,7 +653,7 @@ export const taskManager =
             if (mem.controllerProgress?.level === undefined) continue;
             if (mem.controllerProgress?.level !== room.controller?.level) mem.controllerProgress.level = room.controller?.level ?? 0;
 
-            if (Game.time % 500 === 0) mem.phase = getRoomPhase(room);
+            if (Game.time % 10 === 0) mem.phase = getRoomPhase(room);
 
             createTasks(room, tasks);
 

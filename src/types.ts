@@ -181,6 +181,15 @@ export interface RoomMemory
     };
   };
   constructionQueue?: string[];
+  structures?:
+  {
+    [id: string]:
+    {
+      x: number,
+      y: number,
+      type: BuildableStructureConstant
+    };
+  };
   controllerProgress?:
   {
     level: number;
