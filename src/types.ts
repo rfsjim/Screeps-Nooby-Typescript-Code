@@ -167,6 +167,13 @@ export interface NoneTask extends Task
   targetId?: undefined;
 }
 
+export interface ConstructionTask {
+  type: BuildableStructureConstant;
+  count: number;    // how many of this structure to build
+  priority: number; // priority of this task for ordering, lower is higher priority
+  dependsOn?: BuildableStructureConstant[]; // structures that must be built before this one
+}
+
 // Memory Interfaces
 
 export interface RoomMemory
