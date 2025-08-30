@@ -53,7 +53,7 @@ export function manageSpawning(room: Room): void
     if (!spawn) return;
 
     // TODO: Update to not hard code role types
-    const currRoles: Role[] = ['harvester', 'upgrader', 'builder'];
+    const currRoles: Role[] = ['harvester', 'upgrader', 'builder', 'energyMiner'];
     const roomMemory = getRoomMemory(room);
     if (!roomMemory) return;
     const roomPhase = roomMemory.phase;
@@ -79,6 +79,18 @@ export function manageSpawning(room: Room): void
 
     for (const role of currRoles)
     {
+        if (role === 'energyMiner')
+        {
+            let container;
+            for (const [structId, struct] of Object.entries(roomMemory.structures ?? {}))
+            {
+                if (struct.type !== STRUCTURE_CONTAINER) continue;
+
+                container = structId as Id<StructureContainer>;
+            }
+            if (!container) continue;
+        }
+
         const roleCount = Object.values(Game.creeps).filter((c) => (c.room === room && (getCreepMemory(c)).role === role)).length;
 
         if (roleCount < getDesiredCountForRole(roomPhase, role))
@@ -180,11 +192,13 @@ function buildEnergyMinerCreep(sourceId: Id<Source>, spawn: StructureSpawn, ener
      * Five work parts will empty a source in the refresh timeframe
      * Never build with more than five work parts
      * Work and Move energy cost is 150, max energy cost is 750
+     * Add one carry part to total to allow for repairs to containers
      * Spawn capacity is 300 energy, early game extensions provide capacity of 50 energy
      * Initial energy miner at RCL 2 is 3 work group, (5 extensions & spawn)
      * by RCL 3 max sized energy miner is available  (10 extensions & spawn)
      */
 
+    energy = energy - BODYPART_COST[CARRY]; // Remove carry part cost from available energy
     const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
     const maxNumberOfGroups = Math.floor(energy / partGroupCost);
     const partGroupCount = Math.min(maxNumberOfGroups, SOURCE_HARVEST_PARTS);
@@ -199,6 +213,7 @@ function buildEnergyMinerCreep(sourceId: Id<Source>, spawn: StructureSpawn, ener
 
     for (let i = 0; i < partGroupCount; i++) body.push(WORK);
     for (let i = 0; i < partGroupCount; i++) body.push(MOVE);
+    body.push(CARRY); // One carry part for repairs
 
     const creepMemory = getInitialEnergyMinerMemory(sourceId);
     const result = spawn.spawnCreep(body, `energy miner-${Game.time}`,
