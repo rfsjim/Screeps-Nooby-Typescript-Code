@@ -10,6 +10,7 @@ import { getDesiredCountForRole } from "./spawnManager";
 import { runHarvester } from "roles/role.harvester";
 import { runUpgrader } from "roles/role.upgrader";
 import { runBuilder } from "roles/role.builder";
+import { runEnergyMiner } from "roles/role.energyMiner";
 
 /**
  * Type Safe Ensure Global Tasks
@@ -52,7 +53,7 @@ export const roleRunners: Record<Role, (creep: Creep) => void> = {
   harvester: runHarvester,
   upgrader: runUpgrader,
   builder: runBuilder,
-  energyMiner: () => {},
+  energyMiner: runEnergyMiner,
   lorry: () => {},
   repairer: () => {},
   claimer: () => {},

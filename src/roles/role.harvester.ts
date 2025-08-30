@@ -1,13 +1,12 @@
+import { tryHarvest } from "./creepBehaviours";
+import { getCreepMemory } from "managers/memoryManager";
+
 /**
  * Run Harvester
  * A quick and dirty simple energy harvester performing basic direct-drop harvesting
  * For initial phases of screeps to quickly get upgraded to RCL 2
  * @param creep 
  */
-
-import { tryHarvest } from "./creepBehaviours";
-import { getCreepMemory } from "managers/memoryManager";
-
 export function runHarvester(creep: Creep)
 {
     const memory = getCreepMemory(creep);
