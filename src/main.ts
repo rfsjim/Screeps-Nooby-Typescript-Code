@@ -2,7 +2,7 @@
     Typescript Screeps Code for Noobs
 
     Starting 19th February 2023
-    Last Updated 21st August 2025
+    Last Updated 30th August 2025
 
     Version:  0.0.10
     Build:    46
@@ -15,7 +15,7 @@ import { manageSpawning } from "managers/spawnManager";
 import { taskManager } from "managers/taskManager";
 import { detectPlayerUsername } from "helper/helper";
 import { drawDebugVisuals, getDistanceTransform } from "helper/util";
-import { bunkerBuilder } from "managers/buildingManager";
+import { buildingManager } from "managers/buildingManager";
 
 export const loop = () =>
 {
@@ -59,7 +59,7 @@ export const loop = () =>
     // find and track sources
     if (!memory.sources || Object.keys(memory.sources).length === 0) initRoom(room);
 
-    if ((!memory.constructionSites || Object.keys(memory.constructionSites).length === 0)) bunkerBuilder(roomName, 10);
+    if ((!memory.constructionSites || Object.keys(memory.constructionSites).length === 0)) buildingManager(room, 10);
 
     // manage spawning for each room
     manageSpawning(room);
