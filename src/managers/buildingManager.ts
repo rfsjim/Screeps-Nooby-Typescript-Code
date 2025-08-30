@@ -69,7 +69,8 @@ const offsets = [
  * @param room
  * @returns void - works as side effects
  */
-export function buildingManager(room: Room): void {
+export function buildingManager(room: Room, roomMaxlocationDistance: number): void {
+  if (roomMaxlocationDistance < 7) return; // room not big enough for bunkers
   const rcl = room.controller?.level || 0;
   const plan = buildPlan[rcl];
   const roomMemory = getRoomMemory(room);
@@ -258,17 +259,17 @@ function dependenciesMet(
  * @returns Array of RoomPositions for extensions
  */
 function planExtensionPositions(room: Room, count: number): RoomPosition[] {
-  const positions: RoomPosition[] = [];
+  const roomPositions: RoomPosition[] = [];
   const roomMemory = getRoomMemory(room);
-  if (!room.controller) return positions; // room has no controller
+  if (!room.controller) return roomPositions; // room has no controller
 
-  if (!roomMemory.spawns) return positions; // if room has no spawn then we dont need to be building
+  if (!roomMemory.spawns) return roomPositions; // if room has no spawn then we dont need to be building
 
   const initalSpawn = Object.keys(roomMemory.spawns)[0]; // get first spawn created in room as anchor for bunker
-  if (!initalSpawn) return positions;
+  if (!initalSpawn) return roomPositions;
 
   const spawnMemory = roomMemory.spawns[initalSpawn]; // get room memory details
-  if (!spawnMemory) return positions;
+  if (!spawnMemory) return roomPositions;
 
   const spawnPos = new RoomPosition(spawnMemory.x, spawnMemory.y, room.name);
   const controller = room.controller;
@@ -311,8 +312,8 @@ function planExtensionPositions(room: Room, count: number): RoomPosition[] {
           extensionAnchor.y + y,
           room.name
         );
-        positions.push(pos);
-        if (positions.length >= count) return positions; // stop when we have enough positions
+        roomPositions.push(pos);
+        if (roomPositions.length >= count) return roomPositions; // stop when we have enough positions
       }
 
       roomMemory.bunker = {
@@ -321,7 +322,7 @@ function planExtensionPositions(room: Room, count: number): RoomPosition[] {
       };
     }
   }
-  return positions;
+  return roomPositions;
 }
 
 /**
@@ -362,136 +363,6 @@ function planContainerPositions(room: Room, count: number): RoomPosition[] {
     }
   }
   return positions;
-}
-
-/**
- * Build Bunker
- * @param roomName
- * @param roomMaxlocationDistance
- * @returns result of bunker build
- */
-export function bunkerBuilder(
-  roomName: string,
-  roomMaxlocationDistance: number
-): boolean {
-  if (!Game.rooms[roomName].controller) return false; // room has no controller
-  if (roomMaxlocationDistance < 7) return false; // room not big enough for bunkers
-
-  const roomMemory = getRoomMemory(Game.rooms[roomName]);
-  if (
-    roomMemory.constructionSites &&
-    Object.keys(roomMemory.constructionSites).length > 0
-  )
-    return false; // Have unbuilt construction sites don't queue up more
-
-  if (!roomMemory.spawns) return false; // if room has no spawn then we dont need to be building
-  if (roomMemory.rcl < 2) return false; // earliest time we can have extensions
-
-  const initalSpawn = Object.keys(roomMemory.spawns)[0]; // get first spawn created in room as anchor for bunker
-  if (!initalSpawn) return false;
-
-  const spawnMemory = roomMemory.spawns[initalSpawn]; // get room memory details
-  if (!spawnMemory) return false;
-
-  const spawnPos = new RoomPosition(spawnMemory.x, spawnMemory.y, roomName);
-  const controller = Game.rooms[roomName].controller;
-
-  if (roomMemory.structures) {
-    if (
-      Object.keys(roomMemory.structures).length === 6 &&
-      roomMemory.rcl === 2
-    ) {
-      // We have 5 extensions, and a spawn now we need to build 2 containers next to sources
-
-      const sources = Object.keys(roomMemory.sources || {}).map((sourceId) =>
-        Game.getObjectById<Source>(sourceId as Id<Source>)
-      );
-      if (sources.length >= 2) {
-        for (const source of sources) {
-          if (!source) continue; // skip if source is undefined
-
-          for (const { x, y } of offsets) {
-            const terrain = new Room.Terrain(roomName);
-            if (
-              terrain.get(source.pos.x + x, source.pos.y + y) ===
-              TERRAIN_MASK_WALL
-            )
-              continue; // skip if terrain is wall
-            const pos = new RoomPosition(
-              source.pos.x + x,
-              source.pos.y + y,
-              roomName
-            );
-            if (pos.lookFor(LOOK_CONSTRUCTION_SITES).length > 0) continue; // skip if there is already a construction site
-            if (pos.lookFor(LOOK_STRUCTURES).length > 0) continue; // skip if there is already a structure
-            if (pos.lookFor(LOOK_TERRAIN)[0] === "wall") continue; // skip if terrain is wall
-            placeConstructionSite(pos, STRUCTURE_CONTAINER, roomName);
-            const pos1 = new RoomPosition(pos.x - 1, pos.y - 1, roomName); // top-left
-            const pos2 = new RoomPosition(pos.x + 1, pos.y + 1, roomName); // bottom-right
-
-            scanSites(Game.rooms[roomName], [pos1, pos2]);
-
-            break; // only build one container per source
-          }
-        }
-      }
-    }
-    return true; // we have structures so we don't need to build extensions
-  }
-
-  for (const position of positions) {
-    const testPos = new RoomPosition(
-      spawnPos.x + position.x,
-      spawnPos.y + position.y,
-      roomName
-    );
-
-    if (global.getDistanceTransform(roomName).get(testPos.x, testPos.y) >= 7) {
-      // create extension anchor relative to controller & spawn position
-      let extensionAnchor: RoomPosition;
-
-      if (controller.pos.x === spawnPos.x) {
-        extensionAnchor = new RoomPosition(
-          spawnPos.x + 2,
-          spawnPos.y - 1,
-          roomName
-        );
-      } else if (controller.pos.x > spawnPos.x) {
-        extensionAnchor = new RoomPosition(
-          spawnPos.x + 1,
-          spawnPos.y - 2,
-          roomName
-        );
-      } else {
-        extensionAnchor = new RoomPosition(
-          spawnPos.x - 1,
-          spawnPos.y - 2,
-          roomName
-        );
-      }
-
-      // place anchor and neighbours
-      for (const { x, y } of offsets) {
-        const pos = new RoomPosition(
-          extensionAnchor.x + x,
-          extensionAnchor.y + y,
-          roomName
-        );
-        const result = placeConstructionSite(
-          pos,
-          STRUCTURE_EXTENSION,
-          pos.roomName
-        );
-        if (result !== OK) {
-          const pos1 = new RoomPosition(testPos.x - 7, testPos.y - 7, roomName); // top-left
-          const pos2 = new RoomPosition(testPos.x + 7, testPos.y + 7, roomName); // bottom-right
-
-          scanSites(Game.rooms[roomName], [pos1, pos2]);
-        }
-      }
-    }
-  }
-  return false;
 }
 
 /**
