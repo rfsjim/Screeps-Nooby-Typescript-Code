@@ -70,10 +70,13 @@ const offsets = [
  * @returns void - works as side effects
  */
 export function buildingManager(room: Room, roomMaxlocationDistance: number): void {
+  
   if (roomMaxlocationDistance < 7) return; // room not big enough for bunkers
   const rcl = room.controller?.level || 0;
   const plan = buildPlan[rcl];
+  
   const roomMemory = getRoomMemory(room);
+  
   if (!roomMemory) return;
 
   if (!plan) return; // No build plan for this RCL
@@ -94,7 +97,7 @@ export function buildingManager(room: Room, roomMaxlocationDistance: number): vo
 
 if (roomMemory.sources)
 {
-    const sources = Object.keys(roomMemory.sources || {}).map((sourceId) =>
+  const sources = Object.keys(roomMemory.sources || {}).map((sourceId) =>
       Game.getObjectById<Source>(sourceId as Id<Source>)
     );
 
@@ -414,65 +417,50 @@ function scanSites(room: Room, positions: RoomPosition[]): void {
   const allowed = new Set(positions.map((p) => `${p.x},${p.y}`));
 
   // construction sites
-  const sites = room.lookForAtArea(
-    LOOK_CONSTRUCTION_SITES,
-    minY,
-    minX,
-    maxY,
-    maxX,
-    true
-  );
+  const sites = room.lookForAtArea(LOOK_CONSTRUCTION_SITES, minY, minX, maxY, maxX, true);
+if (roomMemory.constructionSites === undefined) roomMemory.constructionSites = {};
+if (roomMemory.constructionQueue === undefined) roomMemory.constructionQueue = [];
 
-  for (const s of sites) {
-    if (!allowed.has(`${s.x},${s.y}`)) continue; // skip if not in expected positions
-    if (roomMemory.constructionSites === undefined)
-      roomMemory.constructionSites = {};
-    if (roomMemory.constructionQueue === undefined)
-      roomMemory.constructionQueue = [];
+for (const s of sites) {
+    const id = s.constructionSite.id;
 
-    if (s.constructionSite.id in roomMemory.constructionSites) continue; // skip if already in memory
+    // Skip if already in memory
+    if (id in roomMemory.constructionSites) continue;
 
-    roomMemory.constructionSites[s.constructionSite.id] = {
-      x: s.x,
-      y: s.y,
-      type: s.constructionSite.structureType,
-    };
+    // Optional: only add if it’s in your planned positions
+    if (allowed.has(`${s.x},${s.y}`)) {
+        roomMemory.constructionSites[id] = {
+            x: s.x,
+            y: s.y,
+            type: s.constructionSite.structureType,
+        };
 
-    if (!roomMemory.constructionQueue.includes(s.constructionSite.id)) {
-      roomMemory.constructionQueue.push(s.constructionSite.id);
-      console.log(
-        `Found site ${s.constructionSite.id} at (${s.x}, ${s.y}) for ${s.constructionSite.structureType}`
-      );
+        if (!roomMemory.constructionQueue.includes(id)) {
+            roomMemory.constructionQueue.push(id);
+        }
+
+        console.log(`Found site ${id} at (${s.x},${s.y}) type ${s.constructionSite.structureType}`);
     }
-  }
+}
 
   // built structures
-  const structures = room.lookForAtArea(
-    LOOK_STRUCTURES,
-    minY,
-    minX,
-    maxY,
-    maxX,
-    true
-  );
+  const structures = room.lookForAtArea(LOOK_STRUCTURES, minY, minX, maxY, maxX, true);
+if (roomMemory.structures === undefined) roomMemory.structures = {};
 
-  for (const s of structures) {
-    if (!allowed.has(`${s.x},${s.y}`)) continue; // skip if not in expected positions
-    if (roomMemory.structures === undefined) roomMemory.structures = {};
+for (const s of structures) {
+    const id = s.structure.id;
+    
+    // Skip if we've already tracked it
+    if (id in roomMemory.structures) continue;
 
-    if (s.structure.id in roomMemory.structures) continue; // skip if already in memory
-
-    // only track structures we build
+    // Only track buildable structures
     if (s.structure.structureType in CONSTRUCTION_COST) {
-      const type = s.structure.structureType as BuildableStructureConstant;
-      roomMemory.structures[s.structure.id] = {
-        x: s.x,
-        y: s.y,
-        type,
-      };
-      console.log(
-        `Found structure ${s.structure.id} at (${s.x}, ${s.y}) for ${s.structure.structureType}`
-      );
+        roomMemory.structures[id] = {
+            x: s.x,
+            y: s.y,
+            type: s.structure.structureType as BuildableStructureConstant,
+        };
+        console.log(`Found structure ${id} at (${s.x},${s.y}) type ${s.structure.structureType}`);
     }
-  }
+}
 }

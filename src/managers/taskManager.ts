@@ -415,7 +415,7 @@ function assignTask(creep: Creep, task: Task): void
     memory.task = task;
 
     const role = taskToRoleMap[task.type];
-    if (memory.role !== role) memory.role = role;
+    // if (memory.role !== role) memory.role = role;
     memory.task.status = 'tasked';
 }
 
@@ -667,10 +667,10 @@ export const taskManager =
                     if (!creep) continue;
                     const creepMemory = getCreepMemory(creep);
 
-                    if (creepMemory.role == 'harvester' && count === 0)
+                    if (creepMemory.role === 'harvester' && count === 0)
                     {
                         count++;
-                        retaskCreepToBuilder(creep);
+                        // retaskCreepToBuilder(creep);
                         if (creepMemory.task) creepMemory.task.status = 'completed';
                     }
                 }

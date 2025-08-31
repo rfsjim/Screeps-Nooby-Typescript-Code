@@ -3,261 +3,310 @@
  */
 
 import { SOURCE_HARVEST_PARTS } from "consts";
-import { getCreepMemory, getInitialCreepMemory, getInitialEnergyMinerMemory, getRoomMemory } from "managers/memoryManager";
+import {
+  getCreepMemory,
+  getInitialCreepMemory,
+  getInitialEnergyMinerMemory,
+  getRoomMemory,
+} from "managers/memoryManager";
 import { Role, RoleComposition, RoomPhase } from "types";
 
-export const desiredCreepsByName: Record<keyof typeof RoomPhase, RoleComposition> =
-{
-    UnitiatedRoom: {},
-    DeathSpiral: {harvester : 2}, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
-    InitialBootstrap: {harvester : 3, upgrader: 1}, // RCL is less than two
-    StableEarlyGame: {energyMiner : 2, upgrader: 2, builder: 1}, // RCL Greater than or equal to 2 and no storage
-    MidGame: {energyMiner: 2, upgrader: 2, builder: 1, lorry: 2},
-    NearMax: {energyMiner: 2, upgrader: 3, builder: 2, lorry: 2, repairer: 1},
-    MaxSingleRoom: {energyMiner: 2, upgrader: 1, lorry: 3, repairer: 2},
-    ExpansionCandidate: {claimer: 1},
+// Desired Creeps by Name RoleComposition is a mapping of role to desired count
+export const desiredCreepsByName: Record<
+  keyof typeof RoomPhase,
+  RoleComposition
+> = {
+  UnitiatedRoom: {},
+  DeathSpiral: { harvester: 2 }, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
+  InitialBootstrap: { harvester: 3, upgrader: 1 }, // RCL is less than two
+  StableEarlyGame: { energyMiner: 2, upgrader: 2, builder: 1 }, // RCL Greater than or equal to 2 and no storage
+  MidGame: { energyMiner: 2, upgrader: 2, builder: 1, lorry: 2 },
+  NearMax: { energyMiner: 2, upgrader: 3, builder: 2, lorry: 2, repairer: 1 },
+  MaxSingleRoom: { energyMiner: 2, upgrader: 1, lorry: 3, repairer: 2 },
+  ExpansionCandidate: { claimer: 1 },
 };
 
-const desiredCreeps: Record<RoomPhase, RoleComposition> =
-{
-    [RoomPhase.UnitiatedRoom]: {},
-    [RoomPhase.DeathSpiral]: {harvester : 2}, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
-    [RoomPhase.InitialBootstrap]: {harvester : 3, upgrader: 1}, // RCL is less than two
-    [RoomPhase.StableEarlyGame]: {energyMiner : 2, upgrader: 2, builder: 1}, // RCL Greater than or equal to 2 and no storage
-    [RoomPhase.MidGame]: {energyMiner: 2, upgrader: 2, builder: 1, lorry: 2},
-    [RoomPhase.NearMax]: {energyMiner: 2, upgrader: 3, builder: 2, lorry: 2, repairer: 1},
-    [RoomPhase.MaxSingleRoom]: {energyMiner: 2, upgrader: 1, lorry: 3, repairer: 2},
-    [RoomPhase.ExpansionCandidate]: {claimer: 1},
+// Desired creeps per room phase & composition
+const desiredCreeps: Record<RoomPhase, RoleComposition> = {
+  [RoomPhase.UnitiatedRoom]: {},
+  [RoomPhase.DeathSpiral]: { harvester: 2 }, // Have less than 100 energy in the room and 1 or less creeps in room Make harvesters
+  [RoomPhase.InitialBootstrap]: { harvester: 3, upgrader: 1 }, // RCL is less than two
+  [RoomPhase.StableEarlyGame]: { energyMiner: 2, upgrader: 2, builder: 1 }, // RCL Greater than or equal to 2 and no storage
+  [RoomPhase.MidGame]: { energyMiner: 2, upgrader: 2, builder: 1, lorry: 2 },
+  [RoomPhase.NearMax]: {
+    energyMiner: 2,
+    upgrader: 3,
+    builder: 2,
+    lorry: 2,
+    repairer: 1,
+  },
+  [RoomPhase.MaxSingleRoom]: {
+    energyMiner: 2,
+    upgrader: 1,
+    lorry: 3,
+    repairer: 2,
+  },
+  [RoomPhase.ExpansionCandidate]: { claimer: 1 },
 };
 
-function getDesiredCreepsForPhase(phase: RoomPhase): RoleComposition
-{
-    return desiredCreeps[phase];
+/**
+ * Get Desired Creeps for Room Phase - helper function for desiredCreeps mapping
+ * @param phase
+ * @returns RoleComposition
+ */
+function getDesiredCreepsForPhase(phase: RoomPhase): RoleComposition {
+  return desiredCreeps[phase];
 }
 
-export function getDesiredCountForRole(phase: RoomPhase, role: Role): number
-{
-    const composition = getDesiredCreepsForPhase(phase);
-    return composition[role] ?? 0;
+/**
+ * Get Desired Count For Role in Room Phase - helper function for desiredCreeps mapping
+ * @param phase
+ * @param role
+ * @returns number of desired creeps for role
+ */
+export function getDesiredCountForRole(phase: RoomPhase, role: Role): number {
+  const composition = getDesiredCreepsForPhase(phase);
+  return Number(composition[role]) ?? 0;
+}
+
+/**
+ * Get all roles that are relevant for this phase
+ * @param phase
+ * @returns roles as keys of RoleComposition
+ */
+export function getRolesForPhase(phase: RoomPhase): Role[] {
+  const composition = getDesiredCreepsForPhase(phase);
+  return Object.keys(composition) as Role[];
 }
 
 /**
  * Manage Spawning, create required spawns
- * @param room 
- * @returns 
+ * @param room
+ * @returns
  */
-export function manageSpawning(room: Room): void
-{
-    if (!room.controller) return;
-    const spawn = Object.values(Game.spawns).filter(spawn => spawn.room.name === room.name)[0];
-    if (!spawn) return;
+export function manageSpawning(room: Room): void {
+  if (!room.controller) return;
+  const spawn = Object.values(Game.spawns).filter(
+    (spawn) => spawn.room.name === room.name
+  )[0];
+  if (!spawn) return;
 
-    // TODO: Update to not hard code role types
-    const currRoles: Role[] = ['harvester', 'upgrader', 'builder', 'energyMiner'];
-    const roomMemory = getRoomMemory(room);
-    if (!roomMemory) return;
-    const roomPhase = roomMemory.phase;
+  const roomMemory = getRoomMemory(room);
+  if (!roomMemory) return;
+  const roomPhase = roomMemory.phase;
+  const currRoles = getRolesForPhase(roomPhase);
 
-    /**
-     * A general creep at max size is 3000 energy,
-     * At RCL 7 extensions have 100 capacity each (50), spawns have 300 capacity each (2),
-     * From RCL 7 max room capacity is 5600 energy up to 12900 at RCL 8
-     * As an aside source in owned rooms is 3000 each (6000 total)
-     * At RCL8 must multiroom to fill energy capacity.
-     * Restricting maxEnergy to only the full room capacity size is wasteful
-     * At higher RCL due to lost time for maxEnergy to max out at max general creep size
-     * TODO: Dynamically allocate largest sized creep requirements instead of magic number
-     */
-    const maxEnergy = Math.min(room.energyCapacityAvailable, 3000);
-    let spawnEnergy;
+  /**
+   * A general creep at max size is 3000 energy,
+   * At RCL 7 extensions have 100 capacity each (50), spawns have 300 capacity each (2),
+   * From RCL 7 max room capacity is 5600 energy up to 12900 at RCL 8
+   * As an aside source in owned rooms is 3000 each (6000 total)
+   * At RCL8 must multiroom to fill energy capacity.
+   * Restricting maxEnergy to only the full room capacity size is wasteful
+   * At higher RCL due to lost time for maxEnergy to max out at max general creep size
+   * TODO: Dynamically allocate largest sized creep requirements instead of magic number
+   */
+  const maxEnergy = Math.min(room.energyCapacityAvailable, 3000);
+  let spawnEnergy;
 
-    if (roomPhase === RoomPhase.DeathSpiral) spawnEnergy = room.energyAvailable;
-    else spawnEnergy = maxEnergy;
+  if (roomPhase === RoomPhase.DeathSpiral) spawnEnergy = room.energyAvailable;
+  else spawnEnergy = maxEnergy;
 
-    // Unless DeathSpiral conditons, only spawn largest creeps available otherwise wait for energy to increase
-    if (room.energyAvailable < spawnEnergy) return;
+  // Unless DeathSpiral conditons, only spawn largest creeps available otherwise wait for energy to increase
+  if (room.energyAvailable < spawnEnergy) return;
 
-    for (const role of currRoles)
-    {
-        if (role === 'energyMiner')
-        {
-            let container;
-            for (const [structId, struct] of Object.entries(roomMemory.structures ?? {}))
-            {
-                if (struct.type !== STRUCTURE_CONTAINER) continue;
-
-                container = structId as Id<StructureContainer>;
-            }
-            if (!container) continue;
-        }
-
-        const roleCount = Object.values(Game.creeps).filter((c) => (c.room === room && (getCreepMemory(c)).role === role)).length;
-
-        if (roleCount < getDesiredCountForRole(roomPhase, role))
-        {
-            if (!spawn.spawning)
-            {
-                if (buildCreep(role, spawn, spawnEnergy) !== OK) console.log(`Error spawning ${role}`);
-            }
-            else
-            {
-                const spawningCreep = Game.creeps[spawn.spawning.name];
-                spawn.room.visual.text(
-                    '🛠️' + (getCreepMemory(spawningCreep)).role,
-                    spawn.pos.x + 1,
-                    spawn.pos.y,
-                    {align: 'left', opacity: 0.8}
-                );
-            }
-        }
+  for (const role of currRoles) {
+    if (role === "energyMiner") {
+      const hasContainer = Object.values(roomMemory.structures ?? {}).some(
+        s => s.type === STRUCTURE_CONTAINER
+      );
+      if (!hasContainer) continue;
     }
+
+    const roleCount = Object.values(Game.creeps).filter(
+      (c) => c.room === room && getCreepMemory(c).role === role
+    ).length;
+
+    if (roleCount < getDesiredCountForRole(roomPhase, role)) {
+      if (!spawn.spawning) {
+        if (buildCreep(role, spawn, spawnEnergy) !== OK)
+          console.log(`Error spawning ${role}`);
+      } else {
+        const spawningCreep = Game.creeps[spawn.spawning.name];
+        spawn.room.visual.text(
+          "🛠️" + getCreepMemory(spawningCreep).role,
+          spawn.pos.x + 1,
+          spawn.pos.y,
+          { align: "left", opacity: 0.8 }
+        );
+      }
+    }
+  }
 }
 
 /**
  * Build Creep - Select function by role type
  * @param role
- * @param spawn 
+ * @param spawn
  * @param energy
- * @param [sourceId=null] 
+ * @param [sourceId=null]
  */
-export function buildCreep(role: Role, spawn: StructureSpawn, energy: number, sourceId: Id<Source> | null = null): number
-{
-    switch (role)
-    {
-        case 'builder':
-        case 'harvester':
-        case 'upgrader':
-            return buildGeneralCreep(role, spawn, energy);
-        case 'energyMiner':
-            if (!sourceId) return ERR_INVALID_TARGET;
-            return buildEnergyMinerCreep(sourceId, spawn, energy);
-        case 'lorry':
-            return buildLorryCreep(spawn, energy);
-        default:
-            return ERR_INVALID_ARGS;
-    }
+export function buildCreep(
+  role: Role,
+  spawn: StructureSpawn,
+  energy: number,
+  sourceId: Id<Source> | null = null
+): number {
+  switch (role) {
+    case "builder":
+    case "harvester":
+    case "upgrader":
+      return buildGeneralCreep(role, spawn, energy);
+    case "energyMiner":
+      if (!sourceId) return ERR_INVALID_TARGET;
+      return buildEnergyMinerCreep(sourceId, spawn, energy);
+    case "lorry":
+      return buildLorryCreep(spawn, energy);
+    default:
+      return ERR_INVALID_ARGS;
+  }
 }
 
 /**
  * Build a general creep for building, harvesting, upgrading
  * Creates balance creep as large as possible with the given energy
  * Min parts group is a work move, move carry
- * @param role 
- * @param spawn 
- * @param energy 
- * @returns 
+ * @param role
+ * @param spawn
+ * @param energy
+ * @returns
  */
-function buildGeneralCreep(role: Role, spawn: StructureSpawn, energy: number): number
-{
-    // each move is 50 energy, work is 100 energy, carry is 50 energy - four part group is 250 energy
-    // spawn capacity is 300 energy
-    // max energy usage of a general creep is 50 parts / 4 part group (12) * 250 energy = 3,000 energy
-    const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[CARRY] + (2 * BODYPART_COST[MOVE]);
-    const maxNumberOfGroups = Math.floor(energy / partGroupCost);
-    const partGroupCount = Math.min(maxNumberOfGroups, Math.floor(MAX_CREEP_SIZE/4));
+function buildGeneralCreep(
+  role: Role,
+  spawn: StructureSpawn,
+  energy: number
+): number {
+  // each move is 50 energy, work is 100 energy, carry is 50 energy - four part group is 250 energy
+  // spawn capacity is 300 energy
+  // max energy usage of a general creep is 50 parts / 4 part group (12) * 250 energy = 3,000 energy
+  const partGroupCost =
+    BODYPART_COST[WORK] + BODYPART_COST[CARRY] + 2 * BODYPART_COST[MOVE];
+  const maxNumberOfGroups = Math.floor(energy / partGroupCost);
+  const partGroupCount = Math.min(
+    maxNumberOfGroups,
+    Math.floor(MAX_CREEP_SIZE / 4)
+  );
 
-    if (partGroupCost < 1 )
-    {
-        console.log(`[${spawn.name}] Not enough energy to spawn ${role}`);
-        return ERR_NOT_ENOUGH_ENERGY;
-    }
+  if (partGroupCost < 1) {
+    console.log(`[${spawn.name}] Not enough energy to spawn ${role}`);
+    return ERR_NOT_ENOUGH_ENERGY;
+  }
 
-    let body: BodyPartConstant[] = [];
+  let body: BodyPartConstant[] = [];
 
-    for (let i = 0; i < partGroupCount; i++) body.push(WORK);
-    for (let i = 0; i < partGroupCount; i++) body.push(CARRY);
-    for (let i = 0; i < partGroupCount; i++) body.push(MOVE, MOVE);
+  for (let i = 0; i < partGroupCount; i++) body.push(WORK);
+  for (let i = 0; i < partGroupCount; i++) body.push(CARRY);
+  for (let i = 0; i < partGroupCount; i++) body.push(MOVE, MOVE);
 
-    // create a creep with created body part for the given role
-    const creepMemory = getInitialCreepMemory(role);
-    const result = spawn.spawnCreep(body, `${role}-${Game.time}`, 
-        { memory: creepMemory }); 
-    if (result !== OK) console.log(`[${spawn.name}] Failed to spawn (${role}): ${result}`);
-    return result;
+  // create a creep with created body part for the given role
+  const creepMemory = getInitialCreepMemory(role);
+  const result = spawn.spawnCreep(body, `${role}-${Game.time}`, {
+    memory: creepMemory,
+  });
+  if (result !== OK)
+    console.log(`[${spawn.name}] Failed to spawn (${role}): ${result}`);
+  return result;
 }
 
 /**
  * Build Container Energy Miner Creep
- * @param sourceId 
- * @param spawn 
- * @param energy 
+ * @param sourceId
+ * @param spawn
+ * @param energy
  */
-function buildEnergyMinerCreep(sourceId: Id<Source>, spawn: StructureSpawn, energy: number): number
-{
-    /**
-     * WORK part harvests 2 energy / tick for owned or reserved room
-     * 3000 energy in owned or reserved room
-     * energy regeneration every 300 ticks
-     * 600 ticks per WORK part per 300 ticks
-     * Five work parts will empty a source in the refresh timeframe
-     * Never build with more than five work parts
-     * Work and Move energy cost is 150, max energy cost is 750
-     * Add one carry part to total to allow for repairs to containers
-     * Spawn capacity is 300 energy, early game extensions provide capacity of 50 energy
-     * Initial energy miner at RCL 2 is 3 work group, (5 extensions & spawn)
-     * by RCL 3 max sized energy miner is available  (10 extensions & spawn)
-     */
+function buildEnergyMinerCreep(
+  sourceId: Id<Source>,
+  spawn: StructureSpawn,
+  energy: number
+): number {
+  /**
+   * WORK part harvests 2 energy / tick for owned or reserved room
+   * 3000 energy in owned or reserved room
+   * energy regeneration every 300 ticks
+   * 600 ticks per WORK part per 300 ticks
+   * Five work parts will empty a source in the refresh timeframe
+   * Never build with more than five work parts
+   * Work and Move energy cost is 150, max energy cost is 750
+   * Add one carry part to total to allow for repairs to containers
+   * Spawn capacity is 300 energy, early game extensions provide capacity of 50 energy
+   * Initial energy miner at RCL 2 is 3 work group, (5 extensions & spawn)
+   * by RCL 3 max sized energy miner is available  (10 extensions & spawn)
+   */
 
-    energy = energy - BODYPART_COST[CARRY]; // Remove carry part cost from available energy
-    const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
-    const maxNumberOfGroups = Math.floor(energy / partGroupCost);
-    const partGroupCount = Math.min(maxNumberOfGroups, SOURCE_HARVEST_PARTS);
+  energy = energy - BODYPART_COST[CARRY]; // Remove carry part cost from available energy
+  const partGroupCost = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
+  const maxNumberOfGroups = Math.floor(energy / partGroupCost);
+  const partGroupCount = Math.min(maxNumberOfGroups, SOURCE_HARVEST_PARTS);
 
-    if (partGroupCost < 1 )
-    {
-        console.log(`[${spawn.name}] Not enough energy to spawn Energy Miner`);
-        return ERR_NOT_ENOUGH_ENERGY;
-    }
+  if (partGroupCost < 1) {
+    console.log(`[${spawn.name}] Not enough energy to spawn Energy Miner`);
+    return ERR_NOT_ENOUGH_ENERGY;
+  }
 
-    let body: BodyPartConstant[] = [];
+  let body: BodyPartConstant[] = [];
 
-    for (let i = 0; i < partGroupCount; i++) body.push(WORK);
-    for (let i = 0; i < partGroupCount; i++) body.push(MOVE);
-    body.push(CARRY); // One carry part for repairs
+  for (let i = 0; i < partGroupCount; i++) body.push(WORK);
+  for (let i = 0; i < partGroupCount; i++) body.push(MOVE);
+  body.push(CARRY); // One carry part for repairs
 
-    const creepMemory = getInitialEnergyMinerMemory(sourceId);
-    const result = spawn.spawnCreep(body, `energy miner-${Game.time}`,
-         {memory: creepMemory });
-    if (result !== OK) console.log(`[${spawn.name}] Failed to spawn (energy miner): ${result}`);
-    return result;
+  const creepMemory = getInitialEnergyMinerMemory(sourceId);
+  const result = spawn.spawnCreep(body, `energy miner-${Game.time}`, {
+    memory: creepMemory,
+  });
+  if (result !== OK)
+    console.log(`[${spawn.name}] Failed to spawn (energy miner): ${result}`);
+  return result;
 }
 
 /**
  * Build lorry that provides logistics for room
  * Filling and transfering resources
- * @param spawn 
- * @param energy 
+ * @param spawn
+ * @param energy
  */
-function buildLorryCreep(spawn: StructureSpawn, energy: number): number
-{
-    /**
-     * each move is 50 energy, carry is 50 energy - three part group is 150 energy
-     * Spawn capacity is 300 energy, RCL extensions provide capacity of 50 energy x 5 extensions
-     * Lorry has twice the move parts to carry parts
-     * make sure that the lorry isn't too big (considering max size of 50 parts)
-     * then build Lorry
-     * Max Energy usage of a Lorry is 50 parts / 3 -> 16 groups * 150 energy = 2,400 energy
-     */
-    // 
-    // 
-    const partGroupCost = BODYPART_COST[CARRY] + (2 * BODYPART_COST[MOVE]);
-    const maxNumberOfGroups = Math.floor(energy / partGroupCost);
-    const partGroupCount = Math.min(maxNumberOfGroups, Math.floor(MAX_CREEP_SIZE/3));
+function buildLorryCreep(spawn: StructureSpawn, energy: number): number {
+  /**
+   * each move is 50 energy, carry is 50 energy - three part group is 150 energy
+   * Spawn capacity is 300 energy, RCL extensions provide capacity of 50 energy x 5 extensions
+   * Lorry has twice the move parts to carry parts
+   * make sure that the lorry isn't too big (considering max size of 50 parts)
+   * then build Lorry
+   * Max Energy usage of a Lorry is 50 parts / 3 -> 16 groups * 150 energy = 2,400 energy
+   */
+  //
+  //
+  const partGroupCost = BODYPART_COST[CARRY] + 2 * BODYPART_COST[MOVE];
+  const maxNumberOfGroups = Math.floor(energy / partGroupCost);
+  const partGroupCount = Math.min(
+    maxNumberOfGroups,
+    Math.floor(MAX_CREEP_SIZE / 3)
+  );
 
-    if (partGroupCost < 1 )
-    {
-        console.log(`[${spawn.name}] Not enough energy to spawn Lorry`);
-        return ERR_NOT_ENOUGH_ENERGY;
-    }
+  if (partGroupCost < 1) {
+    console.log(`[${spawn.name}] Not enough energy to spawn Lorry`);
+    return ERR_NOT_ENOUGH_ENERGY;
+  }
 
-    let body: BodyPartConstant[] = [];
+  let body: BodyPartConstant[] = [];
 
-    for (let i = 0; i < partGroupCount; i++) body.push(CARRY);
-    for (let i = 0; i < partGroupCount; i++) body.push(MOVE, MOVE);
+  for (let i = 0; i < partGroupCount; i++) body.push(CARRY);
+  for (let i = 0; i < partGroupCount; i++) body.push(MOVE, MOVE);
 
-    const creepMemory = getInitialCreepMemory('lorry');
-    const result = spawn.spawnCreep(body, `lorry-${Game.time}`,
-         {memory: creepMemory });
-    if (result !== OK) console.log(`[${spawn.name}] Failed to spawn (Lorry): ${result}`);
-    return result;
+  const creepMemory = getInitialCreepMemory("lorry");
+  const result = spawn.spawnCreep(body, `lorry-${Game.time}`, {
+    memory: creepMemory,
+  });
+  if (result !== OK)
+    console.log(`[${spawn.name}] Failed to spawn (Lorry): ${result}`);
+  return result;
 }
