@@ -270,7 +270,13 @@ export interface RoomMemory {
     [sourceId: string]: {
       x: number;
       y: number;
-      numPositions: number;
+      numPositions: number; // how many positions for creeps to harvest from this source
+      containerId?: Id<StructureContainer>; // if a container is built at this source
+      linkId?: Id<StructureLink>; // if a link is built at this source
+      dropPos?: {
+        x: number; // if no link/container, but drop mining is used at this source
+        y: number; // position where dropminer should stand
+      };
     };
   };
   spawns?: {

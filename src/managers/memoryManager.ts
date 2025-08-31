@@ -52,7 +52,6 @@ export function getCreepMemory(creep: Creep): CreepMemory
 
     const memory = creep.memory as CreepMemory;
 
-    if (!memory.role) memory.role = 'harvester';
     if (typeof memory.working === 'undefined') memory.working = false;
 
     return memory as CreepMemory;
@@ -121,7 +120,9 @@ export function getRoomPhase(room: Room): RoomPhase {
   else if (rcl === 8) phase = RoomPhase.MaxSingleRoom;
   else phase = RoomPhase.ExpansionCandidate;
 
-  if (roomMemory.phase !== phase)
+  const currentPhase = Number(roomMemory.phase);
+
+  if (currentPhase !== phase)
   {
     console.log(`[${room.name}] Phase -> ${RoomPhase[phase]} (${phase}), RCL=${rcl}, creeps=${creepCount}, storage=${hasStorage}`);
     roomMemory.phase = phase;
