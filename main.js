@@ -9,9 +9,9 @@ const init = require('./init'); // game init details
 
 module.exports.loop = function () {
 
-  //let phaseNumber = init.getCurrentPhaseNumber(Game.spawns['Spawn1'].room);
-
-  //init.initGame(phaseNumber);
+  // get phase and initGame details
+  let phaseNumber = init.getCurrentPhaseNumber(Game.spawns['Spawn1'].room);
+  init.initGame(phaseNumber);
 
   if (Game.cpu.tickLimit < 50) {
     console.log('Game CPU dangerously low ' + JSON.stringify(Game.cpu));
@@ -45,6 +45,7 @@ module.exports.loop = function () {
     for (let spawnName in Game.spawns) {
         // run spawn logic
        Game.spawns[spawnName].spawnCreepsIfNecessary();
+       //console.log("Available Energy: " + Game.spawns[spawnName].room.energyAvailable + ", energy capacity: " + Game.spawns[spawnName].room.energyCapacityAvailable);
 
        // run terminal trades
        if (Game.spawns[spawnName].room.terminal && (Game.time % 10 == 0)) {
@@ -55,7 +56,8 @@ module.exports.loop = function () {
        let targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
         if (targets.length > 0)
         {
-            Game.spawns[spawnName].engageSafeMode();
+            console.log("Baddie found");  
+          // Game.spawns[spawnName].engageSafeMode();
         }
     }
 
@@ -63,5 +65,18 @@ module.exports.loop = function () {
     {
       Memory.SCRIPT_VERSION = SCRIPT_VERSION;
       console.log('New code updated');
+    }
+
+    if(!Memory.stats) {
+      Memory.stats = {};
+    }
+
+    Memory.stats.cpu['getUsed'] = Game.cpu.getUsed();
+    Memory.stats.cpu['limit'] = Game.cpu.limit;
+    Memory.stats.cpu['bucket'] = Game.cpu.bucket;
+    
+    if (Game.cpu.bucket >= 10000)
+    {
+        Game.cpu.generatePixel();
     }
 };

@@ -52,7 +52,7 @@ Creep.prototype.getEnergy =
 
 Creep.prototype.pickUpResource =
     function () {
-        target = this.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
+        target = this.pos.findClosestByPath(FIND_DROPPED_RESOURCES);
         if (this.pickup(target) == ERR_NOT_IN_RANGE)
         {
             this.moveTo(target);

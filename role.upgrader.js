@@ -1,6 +1,8 @@
 module.exports = {
-    // a function to run the logic for this role
-    /** @param {Creep} creep */
+    /**
+     * Function to run the logic for this role 
+     * @param {Creep} creep
+     */
     run: function(creep) {
         // if creep is bringing energy to the controller but has no energy left
         if (creep.memory.working == true && creep.store[RESOURCE_ENERGY] == 0) {
@@ -22,6 +24,13 @@ module.exports = {
             if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
                 // if not in range, move towards the controller
                 creep.moveTo(creep.room.controller);
+            }
+
+            // signController if not already signed
+            if (!creep.room.controller.sign || creep.room.controller.sign.username !== creep.room.controller.owner.username) {
+              if (creep.signController(creep.room.controller, "007 was here") == ERR_NOT_IN_RANGE) {
+                creep.moveTo(creep.room.controller);
+              }
             }
         }
         // if creep is supposed to get energy

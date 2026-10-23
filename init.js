@@ -165,7 +165,7 @@ let init = {
   EXIT_NAME: EXIT_NAME,
   EXITS: [FIND_EXIT_TOP, FIND_EXIT_RIGHT, FIND_EXIT_BOTTOM, FIND_EXIT_LEFT],
 
-  getInitialData(roomName) {
+  getInitialData: function(roomName) {
     let data = { roomName: roomName, exits: {}, sMiners: {} };
     let exits = Game.map.describeExits(roomName);
 
@@ -295,7 +295,18 @@ let init = {
         }
       }
     }
+  },
 
+  clearRoomMemory: function() {
+    // check for memory entries of rooms that are no longer existing
+    for (let name in Memory.rooms) {
+        // and checking if the room exists in game array
+        if (Game.rooms[name] == undefined) {
+            // if not, delete the memory entry
+            delete Memory.rooms[name];
+        }
+    }
   }
-
 };
+
+module.exports = init;
