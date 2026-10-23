@@ -1,5 +1,16 @@
-import { HarvestableTarget, PickupTarget, WithdrawableTarget, Task, ResourceCollectionTask, HarvestTask, BuildTask, UpgradeTask, RepairTask, FillTask, OwnerLike } from "types";
+import { HarvestableTarget,
+         PickupTarget,
+         WithdrawableTarget,
+         Task,
+         ResourceCollectionTask,
+         HarvestTask,
+         BuildTask,
+         UpgradeTask,
+         RepairTask,
+         FillTask,
+         OwnerLike } from "types";
 
+import { getRoomMemory } from "managers/memoryManager";
 // Typeguards
 
 /**
@@ -294,3 +305,22 @@ export function setCostAt(costMatrix: CostMatrix, pos: RoomPosition | {x: number
   costMatrix.set(pos.x, pos.y, cost);
 }
 
+
+// function getUnassignedSource(room: Room): Id<Source> | null
+// {
+//   const roomMemory = getRoomMemory(room);
+//   if (!roomMemory?.sources) return null;
+
+//   for (const sourceId in roomMemory.sources)
+//   {
+//     const sourceMem = roomMemory.sources[sourceId];
+//     const assignedMiner = sourceMem.miner;
+
+//     if (!assignedMiner || !Game.creeps[assignedMiner])
+//     {
+//       return sourceMem.id;
+//     }
+//   }
+
+//   return null;
+// }

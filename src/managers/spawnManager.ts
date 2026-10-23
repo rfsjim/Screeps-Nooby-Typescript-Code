@@ -8,6 +8,7 @@ import {
   getInitialCreepMemory,
   getInitialEnergyMinerMemory,
   getRoomMemory,
+  isEnergyMinerMemory,
 } from "managers/memoryManager";
 import { Role, RoleComposition, RoomPhase } from "types";
 
@@ -129,7 +130,32 @@ export function manageSpawning(room: Room): void {
 
     if (roleCount < getDesiredCountForRole(roomPhase, role)) {
       if (!spawn.spawning) {
-        if (buildCreep(role, spawn, spawnEnergy) !== OK)
+        if (role === "energyMiner") {
+          // Find source with no energy miner assigned
+          const sourceId = Object.keys(roomMemory.sources ?? {}).find((sourceId) => {
+            const sourceMemory = roomMemory.sources?.[sourceId];
+            if (!sourceMemory) return false;
+            const assignedMiners = Object.values(Game.creeps).filter(
+              (c) =>
+                {
+                  if (c.room !== room) return false;
+
+                  const mem = getCreepMemory(c);
+                  return isEnergyMinerMemory(mem) && mem.sourceId === sourceId;
+                }
+            ).length;
+            return assignedMiners < 1; // Only one energy miner per source
+          });
+          if (sourceId) {
+            const result = buildCreep(role, spawn, spawnEnergy, sourceId as Id<Source>);
+            if (result !== OK)
+              console.log(`Error spawning ${role} for source ${sourceId}: ${result}`);
+          } else {
+            // All sources have energy miners assigned
+            // This should not happen as role count check is done above
+            console.log(`No available sources for energy miner in room ${room.name}`);
+          }
+        } else if (buildCreep(role, spawn, spawnEnergy) !== OK)
           console.log(`Error spawning ${role}`);
       } else {
         const spawningCreep = Game.creeps[spawn.spawning.name];
@@ -260,7 +286,7 @@ function buildEnergyMinerCreep(
   body.push(CARRY); // One carry part for repairs
 
   const creepMemory = getInitialEnergyMinerMemory(sourceId);
-  const result = spawn.spawnCreep(body, `energy miner-${Game.time}`, {
+  const result = spawn.spawnCreep(body, `energyMiner-${spawn.room.name}-${Game.time}`, {
     memory: creepMemory,
   });
   if (result !== OK)

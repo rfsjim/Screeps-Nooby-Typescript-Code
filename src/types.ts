@@ -294,6 +294,13 @@ export interface RoomMemory {
   };
 }
 
+interface SourceMemory {
+  id: Id<Source>;
+  miner?: string; // creep name of assigned miner
+  containerId?: Id<StructureContainer>;
+  linkId?: Id<StructureLink>;
+}
+
 export interface CreepMemory {
   role: Role;
   working: boolean;

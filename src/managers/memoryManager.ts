@@ -130,3 +130,23 @@ export function getRoomPhase(room: Room): RoomPhase {
 
   return phase;
 }
+
+/**
+ * Type guard for energy miner meomory
+ * @param mem 
+ * @returns EnergyMinerMemory
+ */
+export function isEnergyMinerMemory(mem: CreepMemory): mem is EnergyMinerMemory {
+  return mem.role === "energyMiner" && "sourceId" in mem;
+}
+
+/**
+ * Retrieves EnergyMinerMemory
+ * @param mem 
+ * @returns 
+ */
+export function getEnergyMinerMemory(mem: CreepMemory): EnergyMinerMemory | null
+{
+  if (isEnergyMinerMemory(mem)) return mem;
+  return null;
+}
