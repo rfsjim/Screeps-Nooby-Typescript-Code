@@ -254,7 +254,8 @@ const init = {
 
   initGame: function(phaseNumber) {
 	//TODO: Do we need phaseNumber here ?
-	console.log(phaseNumber);
+	phaseNumber = phaseNumber++;
+	if (phaseNumber < 0) {return;}
 	
     if (!Memory.gcl) {
       Memory.gcl = 0;
