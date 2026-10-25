@@ -16,7 +16,13 @@ const roles = {
 
 Creep.prototype.runRole =
     function () {
-        roles[this.memory.role].run(this);
+		const role = roles[this.memory.role];
+
+        if (!role || typeof role.run !== 'function') {
+			console.log(`Unknown role: ${this.memory.role} for creep ${this.name}`);
+			return;
+		} 
+		role.run(this);
     };
 
 Creep.prototype.getEnergy =
