@@ -1,0 +1,55 @@
+[changelog]
+header = """
+# Changelog
+
+All notable changes to the Screeps Colony Automation will be documented in this file.
+
+"""
+body = """
+{% if version %}
+## {{ version }} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}
+## Unreleased
+{% endif %}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+
+{% for commit in commits %}
+- {{ commit.message | upper_first }}
+{% endfor %}
+
+{% endfor %}
+"""
+trim = true
+
+[git]
+processing_order = [
+    "commit_preprocessors",
+    "split_commits",
+    "conventional_commits",
+    "commit_parsers",
+    "link_parsers",
+]
+
+conventional_commits = false
+filter_unconventional = false
+filter_commits = true
+
+# commit_preprocessors = [
+#    { pattern = "(?i)^fix:\\s+lint\\b", replace = "style: lint" },
+# ]
+
+commit_parsers = [
+    { message = "(?i)^feat", group = "Added" },
+    { message = "(?i)^fix", group = "Fixed" },
+    { message = "(?i)^perf", group = "Performance" },
+
+    { message = "(?i)^refactor", skip = true },
+    { message = "(?i)^doc", skip = true },
+    { message = "(?i)^style", skip = true },
+    { message = "(?i)^test", skip = true },
+    { message = "(?i)^ci", skip = true },
+    { message = "(?i)^build", skip = true },
+    { message = "(?i)^chore", skip = true },
+]
