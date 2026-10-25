@@ -5,30 +5,41 @@ module.exports = {
      */
     run: function(creep) {
         // if creep is bringing energy to the controller but has no energy left
-        if (creep.memory.working == true && creep.store[RESOURCE_ENERGY] == 0) {
+        if (creep.memory.working === true && creep.store[RESOURCE_ENERGY] === 0) {
             // switch state
             creep.memory.working = false;
         }
         // if creep is harvesting energy but is full
-        else if (creep.memory.working == false && creep.store[RESOURCE_ENERGY] == creep.store.getCapacity(RESOURCE_ENERGY)) {
+        else if (
+			creep.memory.working === false &&
+			creep.store[RESOURCE_ENERGY] === creep.store.getCapacity(RESOURCE_ENERGY)
+		) {
             // switch state
             creep.memory.working = true;
         }
 
         // if creep is supposed to transfer energy to the controller
-        if (creep.memory.working == true) {
+        if (creep.memory.working === true) {
             // instead of upgraderController we could also use:
             // if (creep.transfer(creep.room.controller, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
 
             // try to upgrade the controller
-            if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+            if (creep.upgradeController(creep.room.controller) === ERR_NOT_IN_RANGE) {
                 // if not in range, move towards the controller
                 creep.moveTo(creep.room.controller);
             }
 
             // signController if not already signed
-            if (!creep.room.controller.sign || creep.room.controller.sign.username !== creep.room.controller.owner.username) {
-              if (creep.signController(creep.room.controller, "007 was here") == ERR_NOT_IN_RANGE) {
+            if (
+				!creep.room.controller.sign ||
+				creep.room.controller.sign.username !== creep.room.controller.owner.username
+			) {
+              if (
+				creep.signController(
+					creep.room.controller,
+					'007 was here'
+				) === ERR_NOT_IN_RANGE
+				) {
                 creep.moveTo(creep.room.controller);
               }
             }
