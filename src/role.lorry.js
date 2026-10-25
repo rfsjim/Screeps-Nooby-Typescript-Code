@@ -30,7 +30,7 @@ module.exports = {
                              && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
             });
 
-            if (!structure) structure = storage;
+            if (!structure) {structure = storage;}
 
             if (structure) {
                 if (creep.transfer(structure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
