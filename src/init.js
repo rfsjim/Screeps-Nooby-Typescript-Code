@@ -7,7 +7,7 @@ const EXIT_NAME = {
   [FIND_EXIT_RIGHT]: 'FIND_EXIT_RIGHT',
 };
 
-let Phases = [
+const Phases = [
   {},
   {
     Level: 1,
@@ -16,11 +16,11 @@ let Phases = [
     checkGoal: (room) => {
       // First goal build a container for each source, five extensions and a storage
       let desiredExtensionCount = 5,
-        desiredContainerCount = (room.find(FIND_SOURCES) || {}).length || 0,
-        structures = room.find(FIND_STRUCTURES);
+        desiredContainerCount = (room.find(FIND_SOURCES) || {}).length || 0;
+      const structures = room.find(FIND_STRUCTURES);
 
       for (let i = 0; i < structures.length; i++) {
-        let structure = structures[i];
+        const structure = structures[i];
         if (structure.structureType === 'extension') {
           desiredExtensionCount--;
         } else if (structure.structureType === 'container') {
@@ -74,10 +74,10 @@ let Phases = [
     SpawnPeriod: 50,
     checkGoal: (room) => {
       // Goal build a tower
-      let structures = room.find(FIND_MY_STRUCTURES);
+      const structures = room.find(FIND_MY_STRUCTURES);
 
       for (let i=0; i<structures.length;i++) {
-        let structure = structures[i];
+        const structure = structures[i];
         if (structure.structureType === 'tower') {
           return true;
         }
@@ -161,19 +161,19 @@ let Phases = [
   },
 ];
 
-let init = {
+const init = {
   EXIT_NAME: EXIT_NAME,
   EXITS: [FIND_EXIT_TOP, FIND_EXIT_RIGHT, FIND_EXIT_BOTTOM, FIND_EXIT_LEFT],
 
   getInitialData: function(roomName) {
-    let data = { roomName: roomName, exits: {}, sMiners: {} };
-    let exits = Game.map.describeExits(roomName);
+    const data = { roomName: roomName, exits: {}, sMiners: {} };
+    const exits = Game.map.describeExits(roomName);
 
     this.EXITS.forEach((exitDir) => {
-      let isConnected =  !!exits[exitDir];
+      const isConnected =  !!exits[exitDir];
 
       if (isConnected) {
-        let name = exits[exitDir];
+        const name = exits[exitDir];
         if (Memory.rooms[name]) {
           data.exits[exitDir] = name;
         } else {
@@ -195,10 +195,10 @@ let init = {
   },
 
   determineRoomName: function(roomName, exitDir) {
-    let pre1 = roomName[0],
-      leftright = parseInt(roomName[1]),
-      pre2 = roomName[2],
-      topbottom = parseInt(roomName[3]);
+    const pre1 = roomName[0];
+    let leftright = parseInt(roomName[1]);
+    const pre2 = roomName[2];
+    let topbottom = parseInt(roomName[3]);
 
     switch (exitDir) {
       case FIND_EXIT_TOP:
@@ -216,7 +216,7 @@ let init = {
       default:
         throw new Error('invalid direction ' + exitDir);
     }
-    let newRoom = pre1 + leftright + pre2 + topbottom;
+    const newRoom = pre1 + leftright + pre2 + topbottom;
     return newRoom;
   },
 
@@ -236,7 +236,7 @@ let init = {
   },
 
   determineCurrentPhaseNumber: function(room) {
-    let roomName = room.name || room,
+    const roomName = room.name || room,
       phaseNo = Memory.rooms[roomName].phase || 1,
       phase = Phases[phaseNo],
       period = phase.checkLevelPeriod,
@@ -253,36 +253,39 @@ let init = {
   },
 
   initGame: function(phaseNumber) {
+	//TODO: Do we need phaseNumber here ?
+	console.log(phaseNumber);
+	
     if (!Memory.gcl) {
       Memory.gcl = 0;
-      for (let roomName in Game.rooms) {
-        let room = Game.rooms[roomName];
+      for (const roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
         if (room.controller && room.controller.my) {
           Memory.gcl++;
         }
       }
     }
 
-    if (!Memory.decon) Memory.decon = {};
-    if (!Memory.con) Memory.con = {};
-    if (!Memory.rooms) Memory.rooms = {};
-    if (!Memory.towers) Memory.towers = {};
-    if (!Memory.spawns) Memory.spawns = {};
+    if (!Memory.decon) {Memory.decon = {};}
+    if (!Memory.con) {Memory.con = {};}
+    if (!Memory.rooms) {Memory.rooms = {};}
+    if (!Memory.towers) {Memory.towers = {};}
+    if (!Memory.spawns) {Memory.spawns = {};}
 
-    for (let roomName in Game.rooms) {
+    for (const roomName in Game.rooms) {
       if (!Memory.rooms[roomName]) {
         Memory.rooms[roomName] = this.getInitialData(roomName);
       }
     }
 
-    for (let spawnName in Game.spawns) {
+    for (const spawnName in Game.spawns) {
       if (!Memory.spawns[spawnName]) {
-        let phase = this.getCurrentPhaseInfo(Game.spawns[spawnName].room);
+        const phase = this.getCurrentPhaseInfo(Game.spawns[spawnName].room);
 
         Memory.spawns[spawnName] = {};
 
         if (!Memory.spawns[spawnName].minCreeps) {
-          Memory.spawns[spawnName].minCreeps = {}
+          Memory.spawns[spawnName].minCreeps = {};
           Memory.spawns[spawnName].minCreeps.harvester = phase.Harvester.count;
           Memory.spawns[spawnName].minCreeps.lorry = phase.Lorry.count;
           Memory.spawns[spawnName].minCreeps.claimer = phase.Claimer.count;
@@ -299,9 +302,9 @@ let init = {
 
   clearRoomMemory: function() {
     // check for memory entries of rooms that are no longer existing
-    for (let name in Memory.rooms) {
+    for (const name in Memory.rooms) {
         // and checking if the room exists in game array
-        if (Game.rooms[name] == undefined) {
+        if (Game.rooms[name] === undefined) {
             // if not, delete the memory entry
             delete Memory.rooms[name];
         }
