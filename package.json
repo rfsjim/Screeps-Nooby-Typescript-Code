@@ -4,10 +4,15 @@
     "test": "node --test --test-concurrency=1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "check": "npm run lint && npm test"
+    "check": "npm run lint && npm test",
+    "build": "esbuild src/main.js --bundle --platform=node --format=cjs --target=es2019 --outfile=dist/main.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.2",
     "eslint": "^10.13.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
