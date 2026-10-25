@@ -121,8 +121,8 @@ test('a failed miner spawn does not block a viable lower-priority spawn', () => 
     energyAvailable: 300,
     energyCapacityAvailable: 300,
     find(type) {
-      if (type === FIND_MY_CREEPS) return creeps;
-      if (type === FIND_SOURCES) return [source];
+      if (type === FIND_MY_CREEPS) {return creeps;}
+      if (type === FIND_SOURCES) {return [source];}
       return [];
     }
   };
