@@ -6,16 +6,16 @@ export class initRoom {
   }
 
   getSources() {
-    for (let id in this.sources) {
-      let Game.Rooms[this.room].memory.sMiners[id] = [];
+    for (const id in this.sources) {
+      Game.rooms[this.room].memory.sMiners[id] = [];
     }
 
     return Object.keys(this.sources).length;
   }
 
   ensureContainers() {
-    for (let id in this.sources) {
-      let source = Game.getObjectById(id);
+    for (const id in this.sources) {
+      const source = Game.getObjectById(id);
       let x = source.pos.x;
       let y = source.pos.y;
       for (let i = x-1; i < x+2; i++) {
@@ -25,14 +25,14 @@ export class initRoom {
               // if terrain next to source is wall ignore as no container can be here
               break;
             default:
-              let currentPosition = new RoomPosition(i,j,this.room);
+              const currentPosition = new RoomPosition(i,j,this.room);
               let structuresHere = currentPosition.lookFor(LOOK_STRUCTURES);
               if (!structuresHere) {
-                let structuresHere = currentPosition.lookFor(LOOK_CONSTRUCTION_SITES);
+                structuresHere = currentPosition.lookFor(LOOK_CONSTRUCTION_SITES);
               }
-              if (!structuresHere) continue;
-              for (let structureType in structuresHere) {
-                if (structureType == STRUCTURE_CONTAINER) {
+              if (!structuresHere) {continue;}
+              for (const structureType in structuresHere) {
+                if (structureType === STRUCTURE_CONTAINER) {
                   return 1;
                 }
               }
@@ -40,8 +40,8 @@ export class initRoom {
         }
       }
       // No container found around source - createConstructionSite for container
-      let x = source.pos.x;
-      let y = source.pos.y;
+      x = source.pos.x;
+      y = source.pos.y;
       for (let i = x-1; i < x+2; i++) {
         for (let j = y-1; j < y+2; j++) {
           switch(this.terrain.get(i,j)) {
@@ -49,7 +49,7 @@ export class initRoom {
               // it is wall no construction site can go here
               break;
             default:
-              let currentPosition = new RoomPosition(i,j,this.room);
+              const currentPosition = new RoomPosition(i,j,this.room);
               return currentPosition.createConstructionSite(STRUCTURE_CONTAINER);
           }
         }
