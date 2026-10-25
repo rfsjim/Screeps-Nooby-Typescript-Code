@@ -20,7 +20,7 @@ module.exports = {
         // if creep is supposed to transfer energy to a structure
         if (creep.memory.working === true) {
             // find closest spawn, extension or tower which is not full
-            const structure = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+            let structure = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 // the second argument for findClosestByPath is an object which takes
                 // a property called filter which can be a function
                 // we use the arrow operator to define it
@@ -45,7 +45,7 @@ module.exports = {
         }
         // if creep is supposed to harvest energy from unclaimed resources
         else {
-            const target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
+            let target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
             if (target !== undefined) {
               // try to pick up dropped resources
               if (creep.pickup(target) === ERR_NOT_IN_RANGE) {
