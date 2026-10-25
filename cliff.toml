@@ -6,20 +6,20 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 
 """
 body = """
-{% if version %}
+{% if version -%}
 ## {{ version }} - {{ timestamp | date(format="%Y-%m-%d") }}
-{% else %}
+{% else -%}
 ## Unreleased
-{% endif %}
+{% endif -%}
 
-{% for group, commits in commits | group_by(attribute="group") %}
+{% for group, commits in commits | group_by(attribute="group") -%}
 ### {{ group }}
 
-{% for commit in commits %}
+{% for commit in commits -%}
 - {{ commit.message | upper_first }}
-{% endfor %}
+{% endfor -%}
 
-{% endfor %}
+{% endfor -%}
 """
 trim = true
 
