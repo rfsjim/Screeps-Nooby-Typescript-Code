@@ -10,8 +10,12 @@ const init = require('./init'); // game init details
 module.exports.loop = function () {
 
   // get phase and initGame details
-  const phaseNumber = init.getCurrentPhaseNumber(Game.spawns[0].room);
-  init.initGame(phaseNumber);
+  const firstSpawn = Object.values(Game.spawns)[0];
+  if (firstSpawn) {
+	const phaseNumber = init.getCurrentPhaseNumber(firstSpawn.room);
+	init.initGame(phaseNumber);
+  }
+  
 
   if (Game.cpu.tickLimit < 50) {
     console.log('Game CPU dangerously low ' + JSON.stringify(Game.cpu));
@@ -67,16 +71,18 @@ module.exports.loop = function () {
       console.log('New code updated');
     }
 
-    if(!Memory.stats) {
-      Memory.stats = {};
-    }
-
-    Memory.stats.cpu['getUsed'] = Game.cpu.getUsed();
-    Memory.stats.cpu['limit'] = Game.cpu.limit;
-    Memory.stats.cpu['bucket'] = Game.cpu.bucket;
+    if (!Memory.stats) {
+		Memory.stats = {};
+	}
+	
+	Memory.stats.cpu = {
+		getUsed: Game.cpu.getUsed(),
+		limit: Game.cpu.limit,
+		bucket: Game.cpu.bucket
+	};
     
-    if (Game.cpu.bucket >= 10000)
-    {
-        Game.cpu.generatePixel();
-    }
+    // if (Game.cpu.bucket >= 10000)
+    // {
+    //     Game.cpu.generatePixel();
+    // }
 };
