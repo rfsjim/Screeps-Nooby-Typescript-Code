@@ -5,3 +5,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/rfsjim/Screeps-Nooby-Typescript-Code/development/colony-v2)
 
 Updating the codebase using a known stable baseline.
+
+[CHANGELOG](./CHANGELOG.md)
+[CODE OF CONDUCT](./CODE_OF_CONDUCT.md)
+[CONTRIBUTING](./CONTRIBUTING.md)
