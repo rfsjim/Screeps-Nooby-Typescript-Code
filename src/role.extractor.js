@@ -6,7 +6,7 @@ module.exports = {
         if (creep.memory.extracting && creep.store.getCapacity() === _.sum(creep.carry)) {
             creep.memory.extracting = false;
         }
-        if (!creep.memory.extracting && 0 === _.sum(creep.carry)) {
+        if (!creep.memory.extracting && _.sum(creep.carry) === 0) {
             creep.memory.extracting = true;
             if (creep.ticksToLive < 200) {
                 creep.suicide();
