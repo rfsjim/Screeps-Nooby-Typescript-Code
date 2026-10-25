@@ -11,9 +11,11 @@ module.exports = defineConfig([
 			'no-var': 'error',
 			eqeqeq: ['error', 'always'],
 			curly: ['error', 'all'],
+			yoda: ['error', 'never'],
 
 			// Code quality
 			'no-empty': ['error', { allowEmptyCatch: true }],
+			'no-cond-assign': ['error', 'always'],
 			'no-unused-vars': 'error',
 			'no-debugger': 'error',
 			'no-duplicate-imports': 'error',
