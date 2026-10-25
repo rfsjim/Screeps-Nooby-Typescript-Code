@@ -10,7 +10,7 @@ const init = require('./init'); // game init details
 module.exports.loop = function () {
 
   // get phase and initGame details
-  let phaseNumber = init.getCurrentPhaseNumber(Game.spawns[0].room);
+  const phaseNumber = init.getCurrentPhaseNumber(Game.spawns[0].room);
   init.initGame(phaseNumber);
 
   if (Game.cpu.tickLimit < 50) {
@@ -19,49 +19,49 @@ module.exports.loop = function () {
   }
 
   // check for memory entries of dead creeps by iterating over Memory.creeps
-  for (let name in Memory.creeps) {
+  for (const name in Memory.creeps) {
       // and checking if the creep is still alive
-      if (Game.creeps[name] == undefined) {
+      if (Game.creeps[name] === undefined) {
           // if not, delete the memory entry
           delete Memory.creeps[name];
       }
   }
 
   // Tell the current creeps what to do - for each creeps
-  for (let name in Game.creeps) {
+  for (const name in Game.creeps) {
     // run creep logic
      Game.creeps[name].runRole();
     }
 
   // Run tower commands - find all towers
-  var towers = _.filter(Game.structures, s => s.structureType == STRUCTURE_TOWER);
+  const towers = _.filter(Game.structures, s => s.structureType === STRUCTURE_TOWER);
   // for each tower
-  for (let tower of towers) {
+  for (const tower of towers) {
     // run tower logic
     tower.defend();
     }
 
     // for each spawn
-    for (let spawnName in Game.spawns) {
+    for (const spawnName in Game.spawns) {
         // run spawn logic
        Game.spawns[spawnName].spawnCreepsIfNecessary();
        //console.log("Available Energy: " + Game.spawns[spawnName].room.energyAvailable + ", energy capacity: " + Game.spawns[spawnName].room.energyCapacityAvailable);
 
        // run terminal trades
-       if (Game.spawns[spawnName].room.terminal && (Game.time % 10 == 0)) {
+       if (Game.spawns[spawnName].room.terminal && (Game.time % 10 === 0)) {
            Game.spawns[spawnName].room.terminal.findTrade();
        }
 
        // find hostile creeps for defense
-       let targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
+       const targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
         if (targets.length > 0)
         {
-            console.log("Baddie found");  
+            console.log('Baddie found');
           // Game.spawns[spawnName].engageSafeMode();
         }
     }
 
-    if(!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION != SCRIPT_VERSION)
+    if(!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION !== SCRIPT_VERSION)
     {
       Memory.SCRIPT_VERSION = SCRIPT_VERSION;
       console.log('New code updated');
