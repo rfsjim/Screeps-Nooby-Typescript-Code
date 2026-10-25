@@ -3,7 +3,8 @@
   "scripts": {
     "test": "node --test --test-concurrency=1",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "check": "npm run lint && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
