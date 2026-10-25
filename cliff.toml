@@ -36,10 +36,6 @@ conventional_commits = false
 filter_unconventional = false
 filter_commits = true
 
-# commit_preprocessors = [
-#    { pattern = "(?i)^fix:\\s+lint\\b", replace = "style: lint" },
-# ]
-
 commit_parsers = [
     { message = "(?i)^feat", group = "Added" },
     { message = "(?i)^fix", group = "Fixed" },
