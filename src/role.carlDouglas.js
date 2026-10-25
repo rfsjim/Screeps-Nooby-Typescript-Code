@@ -3,9 +3,10 @@ module.exports = {
     /** @param {Creep} creep **/
     run: function(creep) {
 
-      //find hostile creeps to attack if creep has attack parts
+      let target;
+	  //find hostile creeps to attack if creep has attack parts
       if (creep.getActiveBodyparts(ATTACK)>0) {
-        var target = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        target = creep.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
       }
 
       // find creeps to heal if creep has heal parts - simultaneous execution of actions does right most action first
@@ -18,16 +19,16 @@ module.exports = {
           return;
         }
         //find my creeps in room to heal if required
-        var healTarget = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
+        const healTarget = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
           filter: function(object) {
             return object.hits < object.hitsMax;
           }
         });
         if (healTarget) {
           // melee heal is better try it first
-          if (creep.heal(healTarget) == ERR_NOT_IN_RANGE) {
+          if (creep.heal(healTarget) === ERR_NOT_IN_RANGE) {
             // if out of melee range try ranged heal
-            if (creep.rangedHeal(healTarget) == ERR_NOT_IN_RANGE) {
+            if (creep.rangedHeal(healTarget) === ERR_NOT_IN_RANGE) {
               // otherwise move closer
               creep.moveTo(healTarget);
             }
@@ -41,20 +42,20 @@ module.exports = {
         // creeps with ranged attack should move in with ranged attack first
         if (creep.getActiveBodyparts(RANGED_ATTACK)>0) {
           // melee attack stronger than ranged attack, try melee first
-          if (creep.attack(target) == ERR_NOT_IN_RANGE) {
+          if (creep.attack(target) === ERR_NOT_IN_RANGE) {
             // too far away for melee try rangedAttacks
-            let targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+            const targets = creep.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
             if (targets.length > 0) {
               // rangedMassAttack provides bonus splash damage
               creep.rangedMassAttack();
               return;
-            } else if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE) {
+            } else if (creep.rangedAttack(target) === ERR_NOT_IN_RANGE) {
               //keep walking towards the badie
               creep.moveTo(target);
             }
           }
         } else if (creep.getActiveBodyparts(ATTACK)>0) {
-            if (creep.attack(target) == ERR_NOT_IN_RANGE) {
+            if (creep.attack(target) === ERR_NOT_IN_RANGE) {
               creep.moveTo(target);
             }
           }
