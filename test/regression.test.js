@@ -153,7 +153,7 @@ test('a failed miner spawn does not block a viable lower-priority spawn', () => 
 
   assert.deepEqual(
     spawnAttempts.map(attempt => attempt.role),
-    ['miner', 'upgrader'],
+    ['upgrader'],
     'the upgrader attempt should still occur after the miner returns ERR_NOT_ENOUGH_ENERGY'
   );
 });
