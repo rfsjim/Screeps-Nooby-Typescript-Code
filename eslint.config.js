@@ -2,6 +2,9 @@ const { defineConfig } = require('eslint/config');
 
 module.exports = defineConfig([
 	{
+		ignores: ['dist/**'],
+	},
+	{
 		files: ['**/*.js'],
 		rules: {
 			// Style and consistency
