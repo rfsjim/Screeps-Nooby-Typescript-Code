@@ -1,6 +1,7 @@
 const listOfRoles = [
 	'harvester',
 	'lorry',
+	'miner',
 	'claimer',
 	'upgrader',
 	'repairer',
@@ -13,6 +14,9 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
   function() {
     // find room name
     const room = this.room;
+	if (!this.my || this.spawning) {return;}
+	const sources = room.find(FIND_SOURCES);
+
     // find creeps in room
     const creepsInRoom = room.find(FIND_MY_CREEPS);
     const numberOfCreeps = {};
@@ -20,39 +24,67 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
       numberOfCreeps[role] = _.sum(creepsInRoom, (c) => c.memory.role === role);
       // console.log(role + ": " + numberOfCreeps[role] + " - " + JSON.stringify(creepsInRoom));
     }
-    const maxEnergy = room.energyCapacityAvailable;
+    const maxEnergy = room.energyCapacityAvailable; 
+	const currentEnergy = room.energyAvailable;
+	const containers = room.find(
+		FIND_STRUCTURES, {
+			filter: s => s.structureType === STRUCTURE_CONTAINER
+		});
+	const containerEnergy = _.sum(
+		containers,
+		c => c.store[RESOURCE_ENERGY]
+	);
+	const storageEnergy = room.storage?.store[RESOURCE_ENERGY] ?? 0;
+	const availableEnergy = currentEnergy + storageEnergy + containerEnergy;
+
+	const canSpawnHarvester = currentEnergy >= 200;
+	//TODO Needed?: const canFundSpecialisedRecovery = currentEnergy >= 800;
+	const hasRecoveryEnergy = availableEnergy >= 800;
+
     let name = undefined;
 
-    // if no harvesters and no lorries we need a back up creep
-    if (numberOfCreeps['harvester'] === 0 && numberOfCreeps['lorry'] === 0) {
-      // if there still are miners or enough available in the room's storage spawn first backup option
-      // make sure the storage has enough for a lorry this round (min two carry one move) and
-      // a miner next round ( must be five work one move)
-      console.log('No harvester and no lorry');
-      const minFloorRequiredEnergy = 
-	  	(BODYPART_COST['carry'] * 2) + BODYPART_COST['move'] +
-		(BODYPART_COST['work'] * 5) + BODYPART_COST['move'];
-      if (
-		numberOfCreeps['miner'] > 0 ||
-      	(
-		room.storage !== undefined &&
-		room.storage.store[RESOURCE_ENERGY] >= minFloorRequiredEnergy
-		)) {
-        //create a lorry
-        name = this.createLorry((BODYPART_COST['carry'] * 2) + BODYPART_COST['move']);
-        console.log('Create Lorry');
-      }
-      // if no miners and insufficient storage left in room
-      else {
-        // back up option two - create harvester to get economy up and running again
-        name = this.createCustomCreep(room.energyAvailable, 'harvester');
-        console.log('Backup harvester');
-      }
-    }
-    // if no back up creeps required
-    else {
+	// Priority 1 - Keep the colony safe and productive
+	const hasHarvester = numberOfCreeps.harvester > 0;
+	const hasLorry = numberOfCreeps.lorry > 0;
+	const hasMiner = numberOfCreeps.miner > 0;
+
+	const hasEnergySupply = hasMiner || containerEnergy > 0;
+	const hasEnergyProduction = hasHarvester || hasMiner;
+	const hasEnergyDelivery = hasHarvester || (hasLorry && hasEnergySupply);
+	const hasTransportableEnergy = containerEnergy + storageEnergy > 0;
+
+	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
+	const needsEnergyTransport = !hasHarvester && !hasLorry;
+	
+	const canSpawnLorry = currentEnergy >= 150 && hasRecoveryEnergy && hasTransportableEnergy && needsEnergyTransport;
+
+	if (needsEconomyRecovery) {
+		if (canSpawnLorry) {
+			const attempt = this.createLorry((BODYPART_COST[CARRY] * 2) + BODYPART_COST[MOVE]);
+
+			if (attempt.result === OK) {
+				name = attempt.name;
+				console.log('Create Lorry');
+				return;
+			}
+			if (attempt.result === ERR_BUSY) {return;} 
+		}
+		if (canSpawnHarvester) {
+			const attempt= this.createCustomCreep(200, 'harvester');
+
+			if (attempt.result === OK) {
+				name = attempt.name;
+				console.log('Create Harvester');
+				return;
+			}
+			if (attempt.result === ERR_BUSY) {return;} 
+		}
+		return;
+	}
+
+	else {
+		// if no back up creeps required
       // make sure miner at all sources
-      const sources = room.find(FIND_SOURCES);
       // loop through sources
       for (const source of sources) {
         // if the source has no miner
@@ -61,15 +93,20 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
 			c.memory.sourceId === source.id)
 			) {
           // does source have a container?
-          const containers = source.pos.findInRange(FIND_STRUCTURES, 1,
-            {filter: s => s.structureType === STRUCTURE_CONTAINER
-            });
-            // if there is a container next to the source
-            if (containers.length > 0) {
+          const sourceContainers = containers.filter(
+			container => source.pos.inRangeTo(container.pos, 1)
+		  ); 
+          // if there is a container next to the source
+          const minerCost = (BODYPART_COST[WORK] * 5) + BODYPART_COST[MOVE];
+
+          if (sourceContainers.length > 0 && currentEnergy >= minerCost) {
               // spawn a miner for container
-              name = this.createMiner(source.id);
-              console.log('Create Miner');
-              break;
+			  const spawnResult = this.createMiner(source.id);
+			  if (spawnResult === OK) {
+				name = 'miner' + Game.time;
+                console.log('Create Miner');
+                break;
+			  }
             }
         }
       }
@@ -84,7 +121,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
             console.log('Role Claimer?');
           // check available energy and try to spawn claimer
           if (
-			room.energyAvailable >= (BODYPART_COST['claim'] + BODYPART_COST['move'])) {
+			currentEnergy >= (BODYPART_COST['claim'] + BODYPART_COST['move'])) {
             name = this.createClaimer(this.memory.claimRoom);
             console.log('Create Claimer');
           }
@@ -95,18 +132,16 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
         }
         // if no claim order continue checking roles
         else if (numberOfCreeps[role] < this.memory.minCreeps[role]) {
-            console.log(
-				`Number of Creeps ${numberOfCreeps[role]} less than minCreeps`);
           if (
 			role === 'lorry' &&
-			room.energyAvailable >= (
+			currentEnergy >= (
 				(BODYPART_COST['carry']*2) + BODYPART_COST['move']
 			)) {
-            name = this.createLorry(room.energyAvailable);
+            name = this.createLorry(currentEnergy);
             console.log('Create Lorry');
           }
           else {
-            if (room.energyAvailable === maxEnergy) {
+            if (currentEnergy === maxEnergy) {
             name = this.createCustomCreep(maxEnergy, role);
             console.log(`Create Custom ${role}`);
             }
@@ -115,6 +150,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
         }
       }
     }
+
     // if none of the above caused a spawn command check for LongDistanceHarvesters
     const numberOfLongDistanceHarvesters = {};
     if (name === undefined) {
@@ -126,7 +162,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
       if (
 		numberOfLongDistanceHarvesters[roomName] <
 		this.memory.minLongDistanceHarvesters[roomName] &&
-		room.energyAvailable === maxEnergy
+		currentEnergy === maxEnergy
 		) {
         name = this.createLongDistanceHarvester(maxEnergy, 2, room.name, roomName, 0);
         console.log('Create Long Distance Harvester');
@@ -147,7 +183,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
 		);
       }
     }
-  };
+    };
 
 // create new function to spawn creeps
 StructureSpawn.prototype.createCustomCreep =
@@ -171,7 +207,16 @@ StructureSpawn.prototype.createCustomCreep =
 
     // create a creep with created body part for the given role
     const creepMemory = { memory: {role: roleName, working: false}};
-    return this.spawnCreep(body, roleName + Game.time, creepMemory);
+	const name = roleName + Game.time;
+
+	return {
+		name: name,
+		result: this.spawnCreep(
+			body,
+			name,
+			creepMemory
+		)
+	};
   };
 
 // create new function to spawn long distance miners
@@ -239,8 +284,8 @@ StructureSpawn.prototype.createMiner =
 StructureSpawn.prototype.createLorry =
   function(energy) {
     // lorry has twice the carry parts to move parts
-    const numberOfParts = Math.floor(
-		energy / ((BODYPART_COST['carry']*2) + BODYPART_COST['move']));
+    let numberOfParts = Math.floor(
+		energy / ((BODYPART_COST[CARRY]*2) + BODYPART_COST[MOVE]));
     // Make sure creep isn't too big
     numberOfParts = Math.min(numberOfParts,Math.floor(50/3));
     const body = [];
@@ -252,6 +297,20 @@ StructureSpawn.prototype.createLorry =
     }
 
     // create creep with the created body and the role lorry
-    const creepMemory = {memory: {role: 'lorry', working: false}};
-    return this.spawnCreep(body, 'lorry'+Game.time, creepMemory);
+    const creepMemory = {
+		memory: {
+			role: 'lorry',
+			working: false
+		}
+	};
+	const name = 'lorry' + Game.time;
+
+	return {
+		name: name,
+		result: this.spawnCreep(
+			body,
+			name,
+			creepMemory
+		)
+	};
   };
