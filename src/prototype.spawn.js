@@ -81,40 +81,41 @@ StructureSpawn.prototype.spawnCreepsIfNecessary =
 		}
 		return;
 	}
+	// Priority 2 maintain dedicated miners
+	for (const source of sources) {
+		const sourceContainer = containers.find(
+		container => source.pos.inRangeTo(container.pos, 1)
+		);
 
-	else {
-		// if no back up creeps required
-      // make sure miner at all sources
-      // loop through sources
-      for (const source of sources) {
-        // if the source has no miner
-        if (
-			!_.some(creepsInRoom, (c) => c.memory.role === 'miner' &&
-			c.memory.sourceId === source.id)
-			) {
-          // does source have a container?
-          const sourceContainers = containers.filter(
-			container => source.pos.inRangeTo(container.pos, 1)
-		  ); 
-          // if there is a container next to the source
-          const minerCost = (BODYPART_COST[WORK] * 5) + BODYPART_COST[MOVE];
+		if (!sourceContainer) {continue;}
 
-          if (sourceContainers.length > 0 && currentEnergy >= minerCost) {
-              // spawn a miner for container
-			  const spawnResult = this.createMiner(source.id);
-			  if (spawnResult === OK) {
-				name = 'miner' + Game.time;
-                console.log('Create Miner');
-                break;
-			  }
-            }
-        }
-      }
-    }
+		const hasAssignedMiner = creepsInRoom.some(
+		c => c.memory.role === 'miner' &&
+		c.memory.sourceId === source.id
+		);
+
+		if (hasAssignedMiner) {continue;}
+
+		const minerCost = (BODYPART_COST[WORK] * 5) + BODYPART_COST[MOVE];
+
+		if (currentEnergy < minerCost) {return;}
+
+		const attempt = this.createMiner(source.id);
+		if (attempt.result === OK) {
+		name = 'miner' + Game.time;
+		console.log('Create Miner');
+		return;
+		}
+
+		if (
+		attempt.result === ERR_BUSY ||
+		attempt.result === ERR_NOT_ENOUGH_ENERGY) {return;}
+
+		return;
+	}
 
     // if none of others caused a spawn check for other required roles
     if (name === undefined) {
-        //console.log("Name Undefined?");
       for (const role of listOfRoles) {
         // check if any orders to claim a new room
         if (role === 'claimer' && this.memory.claimRoom !== undefined) {
@@ -277,7 +278,17 @@ StructureSpawn.prototype.createMiner =
   function(sourceId) {
     // accept sourceId that requires miner. Miners five work parts will empty a source in the refresh time frame
     const creepMemory = {memory: {role: 'miner', sourceId: sourceId}};
-    return this.spawnCreep([WORK, WORK, WORK, WORK, WORK, MOVE], 'miner' + Game.time, creepMemory);
+	const name = 'miner' + Game.time;
+	const body = [WORK, WORK, WORK, WORK, WORK, MOVE];
+
+	return {
+		name: name,
+		result: this.spawnCreep(
+			body,
+			name,
+			creepMemory
+		)
+	};
   };
 
 // create function to spawn lorry
