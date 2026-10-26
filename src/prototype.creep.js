@@ -45,7 +45,7 @@ Creep.prototype.getEnergy =
         }
       }
       // if no container was found and the Creep should look for Sources
-      if (container === null && useSource) {
+      if (container === null || useSource) {
         // find closest source
         const source = this.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
         // try to harvest energy, if the source is in range
