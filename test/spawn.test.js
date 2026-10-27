@@ -569,3 +569,123 @@ test('a repairer does not spawn to repair a rampart', () => {
 		[],
 	);
 });
+
+test('a wall repairer spawns when wall is damaged below 50% threshold', () => {
+	const damagedWall = createStructure({
+		structureType: STRUCTURE_WALL,
+		hits: CONTAINER_HITS * 0.49,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedWall],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['wallRepairer'],
+	);
+});
+
+test('a wall repairer spawns when rampart is damaged below 50% threshold', () => {
+	const damagedRampart = createStructure({
+		structureType: STRUCTURE_RAMPART,
+		hits: CONTAINER_HITS * 0.49,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedRampart],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['wallRepairer'],
+	);
+});
+
+test('a wall repairer does not spawn when rampart is not damaged below 50% threshold', () => {
+	const damagedRampart = createStructure({
+		structureType: STRUCTURE_RAMPART,
+		hits: CONTAINER_HITS * 0.51,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedRampart],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a wall repairer does not spawn when wall is not damaged below 50% threshold', () => {
+	const damagedWall = createStructure({
+		structureType: STRUCTURE_WALL,
+		hits: CONTAINER_HITS * 0.51,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedWall],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a wall repairer does not spawn when there are no ramparts or walls', () => {
+	const damagedTower = createStructure({
+		structureType: STRUCTURE_TOWER,
+		hits: CONTAINER_HITS * 0.51,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedTower],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a wall repairer does not spawn when wall is damaged at 50% threshold', () => {
+	const damagedWall = createStructure({
+		structureType: STRUCTURE_WALL,
+		hits: CONTAINER_HITS * 0.5,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedWall],
+		minCreeps: { wallRepairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
