@@ -8,81 +8,80 @@ require('./version'); // check script version
 const init = require('./init'); // game init details
 
 module.exports.loop = function () {
+	// get phase and initGame details
+	const firstSpawn = Object.values(Game.spawns)[0];
+	if (firstSpawn) {
+		const phaseNumber = init.getCurrentPhaseNumber(firstSpawn.room);
+		init.initGame(phaseNumber);
+	}
 
-  // get phase and initGame details
-  const firstSpawn = Object.values(Game.spawns)[0];
-  if (firstSpawn) {
-	const phaseNumber = init.getCurrentPhaseNumber(firstSpawn.room);
-	init.initGame(phaseNumber);
-  }
-  
+	if (Game.cpu.tickLimit < 50) {
+		console.log('Game CPU dangerously low ' + JSON.stringify(Game.cpu));
+		return;
+	}
 
-  if (Game.cpu.tickLimit < 50) {
-    console.log('Game CPU dangerously low ' + JSON.stringify(Game.cpu));
-    return;
-  }
+	// check for memory entries of dead creeps by iterating over Memory.creeps
+	for (const name in Memory.creeps) {
+		// and checking if the creep is still alive
+		if (Game.creeps[name] === undefined) {
+			// if not, delete the memory entry
+			delete Memory.creeps[name];
+		}
+	}
 
-  // check for memory entries of dead creeps by iterating over Memory.creeps
-  for (const name in Memory.creeps) {
-      // and checking if the creep is still alive
-      if (Game.creeps[name] === undefined) {
-          // if not, delete the memory entry
-          delete Memory.creeps[name];
-      }
-  }
+	// Tell the current creeps what to do - for each creeps
+	for (const name in Game.creeps) {
+		// run creep logic
+		Game.creeps[name].runRole();
+	}
 
-  // Tell the current creeps what to do - for each creeps
-  for (const name in Game.creeps) {
-    // run creep logic
-     Game.creeps[name].runRole();
-    }
+	// Run tower commands - find all towers
+	const towers = _.filter(
+		Game.structures,
+		(s) => s.structureType === STRUCTURE_TOWER,
+	);
+	// for each tower
+	for (const tower of towers) {
+		// run tower logic
+		tower.defend();
+	}
 
-  // Run tower commands - find all towers
-  const towers = _.filter(Game.structures, s => s.structureType === STRUCTURE_TOWER);
-  // for each tower
-  for (const tower of towers) {
-    // run tower logic
-    tower.defend();
-    }
+	// for each spawn
+	for (const spawnName in Game.spawns) {
+		// run spawn logic
+		Game.spawns[spawnName].spawnCreepsIfNecessary();
+		//console.log("Available Energy: " + Game.spawns[spawnName].room.energyAvailable + ", energy capacity: " + Game.spawns[spawnName].room.energyCapacityAvailable);
 
-    // for each spawn
-    for (const spawnName in Game.spawns) {
-        // run spawn logic
-       Game.spawns[spawnName].spawnCreepsIfNecessary();
-       //console.log("Available Energy: " + Game.spawns[spawnName].room.energyAvailable + ", energy capacity: " + Game.spawns[spawnName].room.energyCapacityAvailable);
+		// run terminal trades
+		if (Game.spawns[spawnName].room.terminal && Game.time % 10 === 0) {
+			Game.spawns[spawnName].room.terminal.findTrade();
+		}
 
-       // run terminal trades
-       if (Game.spawns[spawnName].room.terminal && (Game.time % 10 === 0)) {
-           Game.spawns[spawnName].room.terminal.findTrade();
-       }
+		// find hostile creeps for defense
+		const targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
+		if (targets.length > 0) {
+			console.log('Baddie found');
+			// Game.spawns[spawnName].engageSafeMode();
+		}
+	}
 
-       // find hostile creeps for defense
-       const targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
-        if (targets.length > 0)
-        {
-            console.log('Baddie found');
-          // Game.spawns[spawnName].engageSafeMode();
-        }
-    }
+	if (!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION !== SCRIPT_VERSION) {
+		Memory.SCRIPT_VERSION = SCRIPT_VERSION;
+		console.log('New code updated');
+	}
 
-    if(!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION !== SCRIPT_VERSION)
-    {
-      Memory.SCRIPT_VERSION = SCRIPT_VERSION;
-      console.log('New code updated');
-    }
-
-    if (!Memory.stats) {
+	if (!Memory.stats) {
 		Memory.stats = {};
 	}
-	
+
 	Memory.stats.cpu = {
 		getUsed: Game.cpu.getUsed(),
 		limit: Game.cpu.limit,
-		bucket: Game.cpu.bucket
+		bucket: Game.cpu.bucket,
 	};
-    
-    // if (Game.cpu.bucket >= 10000)
-    // {
-    //     Game.cpu.generatePixel();
-    // }
+
+	// if (Game.cpu.bucket >= 10000)
+	// {
+	//     Game.cpu.generatePixel();
+	// }
 };

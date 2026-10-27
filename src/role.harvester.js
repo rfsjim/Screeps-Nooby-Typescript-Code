@@ -3,16 +3,20 @@ const roleUpgrader = require('./role.upgrader');
 module.exports = {
 	// a function to run the logic for this role
 	// /** @param {Creep} creep */
-	run: function(creep) {
+	run: function (creep) {
 		// if creep is bringing energy to a structure but has no energy left
-		if (creep.memory.working === true && creep.store[RESOURCE_ENERGY] === 0) {
+		if (
+			creep.memory.working === true &&
+			creep.store[RESOURCE_ENERGY] === 0
+		) {
 			// switch state
 			creep.memory.working = false;
 		}
 		// if creep is harvesting energy but is full
 		else if (
 			creep.memory.working === false &&
-			creep.store[RESOURCE_ENERGY] === creep.store.getCapacity(RESOURCE_ENERGY)
+			creep.store[RESOURCE_ENERGY] ===
+				creep.store.getCapacity(RESOURCE_ENERGY)
 		) {
 			// switch state
 			creep.memory.working = true;
@@ -25,16 +29,19 @@ module.exports = {
 				// the second argument for findClosestByPath is an object which takes
 				// a property called filter which can be a function
 				// we use the arrow operator to define it
-				filter: (s) => (
-								s.structureType === STRUCTURE_SPAWN
-								|| s.structureType === STRUCTURE_EXTENSION
-								|| s.structureType === STRUCTURE_TOWER
-								)
-								&& s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY)
+				filter: (s) =>
+					(s.structureType === STRUCTURE_SPAWN ||
+						s.structureType === STRUCTURE_EXTENSION ||
+						s.structureType === STRUCTURE_TOWER) &&
+					s.store[RESOURCE_ENERGY] <
+						s.store.getCapacity(RESOURCE_ENERGY),
 			});
 
 			if (structure === null && creep.room.storage !== undefined) {
-				if (creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+				if (
+					creep.room.storage.store.getFreeCapacity(RESOURCE_ENERGY) >
+					0
+				) {
 					structure = creep.room.storage;
 				}
 			}
@@ -42,12 +49,14 @@ module.exports = {
 			// if we found one
 			if (structure !== null) {
 				// try to transfer energy, if it is not in range
-				if (creep.transfer(structure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+				if (
+					creep.transfer(structure, RESOURCE_ENERGY) ===
+					ERR_NOT_IN_RANGE
+				) {
 					// move towards it
 					creep.moveTo(structure);
 				}
-			}
-			else {
+			} else {
 				// run upgrader logic
 				roleUpgrader.run(creep);
 			}
@@ -56,5 +65,5 @@ module.exports = {
 		else {
 			creep.getEnergy(false, true);
 		}
-	}
+	},
 };
