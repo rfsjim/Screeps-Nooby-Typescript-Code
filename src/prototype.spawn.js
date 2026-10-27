@@ -52,6 +52,10 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	const hasEnergyProduction = hasHarvester || hasMiner;
 	const hasEnergyDelivery = hasHarvester || (hasLorry && hasEnergySupply);
 	const hasTransportableEnergy = containerEnergy + storageEnergy > 0;
+	const hasConstructionSites =
+		room.find(FIND_CONSTRUCTION_SITES, {
+			filter: (s) => s.my,
+		}).length > 0;
 
 	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
 	const needsEnergyTransport = !hasHarvester && !hasLorry;
@@ -160,8 +164,11 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				) {
 					name = this.createLorry(currentEnergy);
 					console.log('Create Lorry');
-				} else {
+				} else if (role !== 'lorry') {
 					if (currentEnergy === maxEnergy) {
+						if (role === 'builder' && !hasConstructionSites) {
+							continue;
+						}
 						name = this.createCustomCreep(maxEnergy, role);
 						console.log(`Create Custom ${role}`);
 					}
