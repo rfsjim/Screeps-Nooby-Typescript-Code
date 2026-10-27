@@ -4,11 +4,12 @@
     "test": "node --test --test-concurrency=1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prettier": "npx prettier --check  \"src/**/*.js\"",
-    "prettier:fix": "npx prettier --write \"src/**/*.js\"",
+    "prettier:fix": "npx prettier --write \"{src,test}/**/*.js\"",
+    "prettier": "npx prettier --check \"{src,test}/**/*.js\"",
     "check": "npm run lint && npm test",
     "build": "esbuild src/main.js --bundle --platform=neutral --format=cjs --target=es2019 --outfile=dist/main.js",
-    "format": "npm run prettier && npm run lint"
+    "verify": "npm run prettier && npm run lint",
+    "format": "npm run prettier:fix && npm run lint:fix"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

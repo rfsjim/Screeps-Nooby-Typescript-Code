@@ -8,7 +8,7 @@ module.exports = defineConfig([
 		files: ['**/*.js'],
 		rules: {
 			// Style and consistency
-			quotes: ['error', 'single'],
+			quotes: ['error', 'single', {avoidEscape: true}],
 			semi: ['error', 'always'],
 			'prefer-const': 'error',
 			'no-var': 'error',
