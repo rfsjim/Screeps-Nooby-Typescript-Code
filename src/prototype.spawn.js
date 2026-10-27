@@ -196,6 +196,10 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 						if (attempt.result === OK) {
 							name = attempt.name;
 						}
+
+						if (attempt.result === ERR_BUSY) {
+							return;
+						}
 					}
 				}
 				break;

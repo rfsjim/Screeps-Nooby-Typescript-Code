@@ -3,6 +3,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
+const STRUCTURE_HITS = 5000;
+
 function installScreepsGlobals() {
 	const constants = {
 		OK: 0,
@@ -204,8 +206,8 @@ function createSourceContainer({
 
 function createStructure({
 	id = 'structure-1',
-	hits = CONTAINER_HITS,
-	hitsMax = CONTAINER_HITS,
+	hits = STRUCTURE_HITS,
+	hitsMax = STRUCTURE_HITS,
 	structureType,
 } = {}) {
 	return {
@@ -242,7 +244,7 @@ function createProductiveCreeps() {
 function createGrowingRoomScenario({
 	creeps = [{ memory: { role: 'harvester' } }, { memory: { role: 'lorry' } }],
 	sources = [createSource()],
-	containers = [createSourceContainer()],
+	structures = [createSourceContainer()],
 	constructionSites = [],
 	energy = 600,
 	energyCapacity = energy,
@@ -253,7 +255,7 @@ function createGrowingRoomScenario({
 		room: createMockRoom({
 			creeps,
 			sources,
-			structures: containers,
+			structures: structures,
 			constructionSites,
 			energy,
 			energyCapacity,
@@ -375,7 +377,7 @@ test('a miner and lorry exit the recovery gate', () => {
 
 test('a growing room without a source container does not spawn a miner', () => {
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
-		containers: [],
+		structures: [],
 	});
 
 	spawn.spawnCreepsIfNecessary();
@@ -503,7 +505,7 @@ test('a repairer spawns when there is a damaged building', () => {
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedStructure],
+		structures: [damagedStructure],
 		minCreeps: { repairer: 1 },
 	});
 
@@ -518,7 +520,7 @@ test('a repairer spawns when there is a damaged building', () => {
 test('a repairer does not spawn when there are no damaged buildings', () => {
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [createSourceContainer()],
+		structures: [createSourceContainer()],
 		minCreeps: { repairer: 1 },
 	});
 
@@ -533,12 +535,12 @@ test('a repairer does not spawn when there are no damaged buildings', () => {
 test('a repairer does not spawn to repair a wall', () => {
 	const damagedWall = createStructure({
 		structureType: STRUCTURE_WALL,
-		hits: CONTAINER_HITS * 0.01,
+		hits: STRUCTURE_HITS * 0.01,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedWall],
+		structures: [damagedWall],
 		minCreeps: { repairer: 1 },
 	});
 
@@ -553,12 +555,12 @@ test('a repairer does not spawn to repair a wall', () => {
 test('a repairer does not spawn to repair a rampart', () => {
 	const damagedRampart = createStructure({
 		structureType: STRUCTURE_RAMPART,
-		hits: CONTAINER_HITS * 0.000000000000001,
+		hits: STRUCTURE_HITS * 0.000000000000001,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedRampart],
+		structures: [damagedRampart],
 		minCreeps: { repairer: 1 },
 	});
 
@@ -573,12 +575,12 @@ test('a repairer does not spawn to repair a rampart', () => {
 test('a wall repairer spawns when wall is damaged below 50% threshold', () => {
 	const damagedWall = createStructure({
 		structureType: STRUCTURE_WALL,
-		hits: CONTAINER_HITS * 0.49,
+		hits: STRUCTURE_HITS * 0.49,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedWall],
+		structures: [damagedWall],
 		minCreeps: { wallRepairer: 1 },
 	});
 
@@ -593,12 +595,12 @@ test('a wall repairer spawns when wall is damaged below 50% threshold', () => {
 test('a wall repairer spawns when rampart is damaged below 50% threshold', () => {
 	const damagedRampart = createStructure({
 		structureType: STRUCTURE_RAMPART,
-		hits: CONTAINER_HITS * 0.49,
+		hits: STRUCTURE_HITS * 0.49,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedRampart],
+		structures: [damagedRampart],
 		minCreeps: { wallRepairer: 1 },
 	});
 
@@ -613,12 +615,12 @@ test('a wall repairer spawns when rampart is damaged below 50% threshold', () =>
 test('a wall repairer does not spawn when rampart is not damaged below 50% threshold', () => {
 	const damagedRampart = createStructure({
 		structureType: STRUCTURE_RAMPART,
-		hits: CONTAINER_HITS * 0.51,
+		hits: STRUCTURE_HITS * 0.51,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedRampart],
+		structures: [damagedRampart],
 		minCreeps: { wallRepairer: 1 },
 	});
 
@@ -633,12 +635,12 @@ test('a wall repairer does not spawn when rampart is not damaged below 50% thres
 test('a wall repairer does not spawn when wall is not damaged below 50% threshold', () => {
 	const damagedWall = createStructure({
 		structureType: STRUCTURE_WALL,
-		hits: CONTAINER_HITS * 0.51,
+		hits: STRUCTURE_HITS * 0.51,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedWall],
+		structures: [damagedWall],
 		minCreeps: { wallRepairer: 1 },
 	});
 
@@ -653,12 +655,12 @@ test('a wall repairer does not spawn when wall is not damaged below 50% threshol
 test('a wall repairer does not spawn when there are no ramparts or walls', () => {
 	const damagedTower = createStructure({
 		structureType: STRUCTURE_TOWER,
-		hits: CONTAINER_HITS * 0.51,
+		hits: STRUCTURE_HITS * 0.51,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedTower],
+		structures: [damagedTower],
 		minCreeps: { wallRepairer: 1 },
 	});
 
@@ -673,12 +675,12 @@ test('a wall repairer does not spawn when there are no ramparts or walls', () =>
 test('a wall repairer does not spawn when wall is damaged at 50% threshold', () => {
 	const damagedWall = createStructure({
 		structureType: STRUCTURE_WALL,
-		hits: CONTAINER_HITS * 0.5,
+		hits: STRUCTURE_HITS * 0.5,
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
 		creeps: createProductiveCreeps(),
-		containers: [damagedWall],
+		structures: [damagedWall],
 		minCreeps: { wallRepairer: 1 },
 	});
 
