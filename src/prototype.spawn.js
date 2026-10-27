@@ -26,7 +26,6 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 			creepsInRoom,
 			(c) => c.memory.role === role,
 		);
-		// console.log(role + ": " + numberOfCreeps[role] + " - " + JSON.stringify(creepsInRoom));
 	}
 	const maxEnergy = room.energyCapacityAvailable;
 	const currentEnergy = room.energyAvailable;
@@ -66,6 +65,14 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				s.structureType !== STRUCTURE_WALL &&
 				s.structureType !== STRUCTURE_RAMPART,
 		}).length > 0;
+	// TODO: Review wall/rampart repair thresholds and align with role target selection.
+	const needsWallRepairs =
+		room.find(FIND_STRUCTURES, {
+			filter: (s) =>
+				(s.structureType === STRUCTURE_WALL ||
+					s.structureType === STRUCTURE_RAMPART) &&
+				s.hits < s.hitsMax * 0.5,
+		}).length > 0;
 
 	const canSpawnLorry =
 		currentEnergy >= 150 &&
@@ -81,7 +88,6 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 
 			if (attempt.result === OK) {
 				name = attempt.name;
-				console.log('Create Lorry');
 				return;
 			}
 			if (attempt.result === ERR_BUSY) {
@@ -93,7 +99,6 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 
 			if (attempt.result === OK) {
 				name = attempt.name;
-				console.log('Create Harvester');
 				return;
 			}
 			if (attempt.result === ERR_BUSY) {
@@ -128,8 +133,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 
 		const attempt = this.createMiner(source.id);
 		if (attempt.result === OK) {
-			name = 'miner' + Game.time;
-			console.log('Create Miner');
+			name = attempt.name;
 			return;
 		}
 
@@ -148,14 +152,20 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 		for (const role of listOfRoles) {
 			// check if any orders to claim a new room
 			if (role === 'claimer' && this.memory.claimRoom !== undefined) {
-				console.log('Role Claimer?');
 				// check available energy and try to spawn claimer
 				if (
 					currentEnergy >=
 					BODYPART_COST['claim'] + BODYPART_COST['move']
 				) {
-					name = this.createClaimer(this.memory.claimRoom);
-					console.log('Create Claimer');
+					const attempt = this.createClaimer(this.memory.claimRoom);
+					if (attempt.result === OK) {
+						name = attempt.name;
+						return;
+					}
+
+					if (attempt.result === ERR_BUSY) {
+						return;
+					}
 				}
 				if (name !== undefined && _.isString(name)) {
 					// delete claim order because claimer successful
@@ -170,7 +180,6 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 						BODYPART_COST['carry'] * 2 + BODYPART_COST['move']
 				) {
 					name = this.createLorry(currentEnergy);
-					console.log('Create Lorry');
 				} else if (role !== 'lorry') {
 					if (currentEnergy === maxEnergy) {
 						if (role === 'builder' && !hasConstructionSites) {
@@ -179,8 +188,14 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 						if (role === 'repairer' && !needsRepairs) {
 							continue;
 						}
-						name = this.createCustomCreep(maxEnergy, role);
-						console.log(`Create Custom ${role}`);
+						if (role === 'wallRepairer' && !needsWallRepairs) {
+							continue;
+						}
+
+						const attempt = this.createCustomCreep(maxEnergy, role);
+						if (attempt.result === OK) {
+							name = attempt.name;
+						}
 					}
 				}
 				break;
@@ -212,15 +227,12 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 					roomName,
 					0,
 				);
-				console.log('Create Long Distance Harvester');
 			}
 		}
 	}
 	// if spawning was a success print name to console
 	if (name !== undefined && _.isString(name)) {
-		console.log(
-			`${this.name} spawned new creep: ${name} ( ${Game.creeps[name].memory.role} )`,
-		);
+		console.log(`${this.name} spawned new creep: ${name}`);
 		for (const role of listOfRoles) {
 			console.log(`${role}: ${numberOfCreeps[role]}`);
 		}
@@ -326,7 +338,13 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 StructureSpawn.prototype.createClaimer = function (target) {
 	// claimer just needs move and claim part
 	const creepMemory = { memory: { role: 'claimer', target: target } };
-	return this.spawnCreep([CLAIM, MOVE], 'claimer' + Game.time, creepMemory);
+	const name = 'claimer' + Game.time;
+	const body = [CLAIM, MOVE];
+
+	return {
+		name: name,
+		result: this.spawnCreep(body, name, creepMemory),
+	};
 };
 
 // create function to spawn miner
