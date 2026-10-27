@@ -41,6 +41,7 @@ function installScreepsGlobals() {
 		ATTACK: 'attack',
 		RANGED_ATTACK: 'ranged_attack',
 		HEAL: 'heal',
+		CONTAINER_HITS: 250000,
 	};
 
 	Object.assign(global, constants);
@@ -186,11 +187,32 @@ function createSource(id = 'source-1') {
 	};
 }
 
-function createSourceContainer(sourceId = 'source-1') {
+function createSourceContainer({
+	adjacentToSourceId = 'source-1',
+	energy = 0,
+	hits = CONTAINER_HITS,
+	hitsMax = CONTAINER_HITS,
+} = {}) {
 	return {
 		structureType: STRUCTURE_CONTAINER,
-		pos: { sourceId },
-		store: { [RESOURCE_ENERGY]: 0 },
+		pos: { sourceId: adjacentToSourceId },
+		store: { [RESOURCE_ENERGY]: energy },
+		hitsMax,
+		hits,
+	};
+}
+
+function createStructure({
+	id = 'structure-1',
+	hits = CONTAINER_HITS,
+	hitsMax = CONTAINER_HITS,
+	structureType,
+} = {}) {
+	return {
+		structureType: structureType,
+		id,
+		hits,
+		hitsMax,
 	};
 }
 
@@ -200,7 +222,7 @@ function createConstructionSite(id = 'construction-site-1', progress = 0) {
 		my: true,
 		structureType: STRUCTURE_CONTAINER,
 		progress,
-		progressTotal: 100,
+		progressTotal: 5000,
 	};
 }
 
@@ -468,5 +490,82 @@ test("a builder does not spawn for another player's construction site", () => {
 
 	spawn.spawnCreepsIfNecessary();
 
-	assert.deepEqual(spawnAttempts, []);
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a repairer spawns when there is a damaged building', () => {
+	const damagedStructure = createSourceContainer({
+		hits: CONTAINER_HITS * 0.5,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedStructure],
+		minCreeps: { repairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['repairer'],
+	);
+});
+
+test('a repairer does not spawn when there are no damaged buildings', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [createSourceContainer()],
+		minCreeps: { repairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a repairer does not spawn to repair a wall', () => {
+	const damagedWall = createStructure({
+		structureType: STRUCTURE_WALL,
+		hits: CONTAINER_HITS * 0.01,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedWall],
+		minCreeps: { repairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('a repairer does not spawn to repair a rampart', () => {
+	const damagedRampart = createStructure({
+		structureType: STRUCTURE_RAMPART,
+		hits: CONTAINER_HITS * 0.000000000000001,
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		containers: [damagedRampart],
+		minCreeps: { repairer: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
 });
