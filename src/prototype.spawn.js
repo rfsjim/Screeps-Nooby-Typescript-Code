@@ -59,6 +59,13 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 
 	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
 	const needsEnergyTransport = !hasHarvester && !hasLorry;
+	const needsRepairs =
+		room.find(FIND_STRUCTURES, {
+			filter: (s) =>
+				s.hits < s.hitsMax &&
+				s.structureType !== STRUCTURE_WALL &&
+				s.structureType !== STRUCTURE_RAMPART
+		}).length > 0;
 
 	const canSpawnLorry =
 		currentEnergy >= 150 &&
@@ -167,6 +174,9 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				} else if (role !== 'lorry') {
 					if (currentEnergy === maxEnergy) {
 						if (role === 'builder' && !hasConstructionSites) {
+							continue;
+						}
+						if (role === 'repairer' && !needsRepairs) {
 							continue;
 						}
 						name = this.createCustomCreep(maxEnergy, role);
