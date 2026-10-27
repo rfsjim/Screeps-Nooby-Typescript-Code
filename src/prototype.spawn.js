@@ -64,7 +64,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 			filter: (s) =>
 				s.hits < s.hitsMax &&
 				s.structureType !== STRUCTURE_WALL &&
-				s.structureType !== STRUCTURE_RAMPART
+				s.structureType !== STRUCTURE_RAMPART,
 		}).length > 0;
 
 	const canSpawnLorry =
