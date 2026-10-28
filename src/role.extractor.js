@@ -1,3 +1,6 @@
+// TODO: Currently uses the extractor, and terminal - consider labs boosts etc and other uses for minerals
+// Revisit mineral availability, workforce demand, and mineral processing (labs, boosts and commodities).
+
 module.exports = {
 	/** @param {Creep} creep **/
 	run: function (creep) {
