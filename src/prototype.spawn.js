@@ -39,6 +39,9 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	const canSpawnHarvester = currentEnergy >= 200;
 	//TODO Needed?: const canFundSpecialisedRecovery = currentEnergy >= 800;
 	const hasRecoveryEnergy = availableEnergy >= 800;
+	const ownedRoomCount = Object.values(Game.rooms).filter(
+		(room) => room.controller?.my,
+	).length;
 
 	let name = undefined;
 
@@ -55,6 +58,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 		room.find(FIND_CONSTRUCTION_SITES, {
 			filter: (s) => s.my,
 		}).length > 0;
+	const hasAvailableClaimSlot = ownedRoomCount < Game.gcl.level;
 
 	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
 	const needsEnergyTransport = !hasHarvester && !hasLorry;
@@ -151,25 +155,29 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	if (name === undefined) {
 		for (const role of listOfRoles) {
 			// check if any orders to claim a new room
-			if (role === 'claimer' && this.memory.claimRoom !== undefined) {
+			if (
+				role === 'claimer' &&
+				this.memory.claimRoom !== undefined &&
+				hasAvailableClaimSlot
+			) {
 				// check available energy and try to spawn claimer
 				if (
 					currentEnergy >=
 					BODYPART_COST['claim'] + BODYPART_COST['move']
 				) {
-					const attempt = this.createClaimer(this.memory.claimRoom);
+					const attempt = this.createClaimer(
+						this.memory.claimRoom,
+						'claim',
+					);
 					if (attempt.result === OK) {
 						name = attempt.name;
+						delete this.memory.claimRoom;
 						return;
 					}
 
 					if (attempt.result === ERR_BUSY) {
 						return;
 					}
-				}
-				if (name !== undefined && _.isString(name)) {
-					// delete claim order because claimer successful
-					delete this.memory.claimRoom;
 				}
 			}
 			// if no claim order continue checking roles
@@ -339,9 +347,11 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 };
 
 // create function to spawn claimer
-StructureSpawn.prototype.createClaimer = function (target) {
+StructureSpawn.prototype.createClaimer = function (target, action) {
 	// claimer just needs move and claim part
-	const creepMemory = { memory: { role: 'claimer', target: target } };
+	const creepMemory = {
+		memory: { role: 'claimer', target: target, controllerAction: action },
+	};
 	const name = 'claimer' + Game.time;
 	const body = [CLAIM, MOVE];
 
