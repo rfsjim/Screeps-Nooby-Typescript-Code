@@ -1,3 +1,6 @@
+// responsibilities have been superseded by role.lorry.js
+// Depreciated do not use
+
 module.exports = {
 	// a function to run the logic for this role
 	// pick up any dropped resources prior to being a normal harvester
@@ -62,6 +65,7 @@ module.exports = {
 				}
 			} else if (creep.pos.findClosestByRange(FIND_TOMBSTONES) !== null) {
 				// try to find any tombstones
+				// TODO What about ruins
 				target = creep.pos.findClosestByRange(FIND_TOMBSTONES);
 				if (creep.withdraw(target) === ERR_NOT_IN_RANGE) {
 					creep.moveTo(target);
