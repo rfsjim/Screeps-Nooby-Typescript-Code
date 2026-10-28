@@ -120,7 +120,12 @@ function createMockRoom({
 	};
 }
 
-function createSpawnScenario({ room, minCreeps = {}, spawnResults = {} }) {
+function createSpawnScenario({
+	room,
+	minCreeps = {},
+	spawnResults = {},
+	game = {},
+}) {
 	const spawnAttempts = [];
 	const spawn = new StructureSpawn();
 	spawn.name = 'Spawn1';
@@ -150,7 +155,17 @@ function createSpawnScenario({ room, minCreeps = {}, spawnResults = {} }) {
 		});
 		return spawnResults[options.memory.role] ?? OK;
 	};
-	global.Game = { creeps: {}, time: 42 };
+	global.Game = {
+		creeps: {},
+		rooms: {},
+		gcl: {
+			level: 1,
+			progress: 0,
+			progressTotal: 1000000,
+		},
+		time: 42,
+		...game,
+	};
 
 	return { spawn, spawnAttempts };
 }
@@ -689,5 +704,183 @@ test('a wall repairer does not spawn when wall is damaged at 50% threshold', () 
 	assert.deepEqual(
 		spawnAttempts.map((attempt) => attempt.role),
 		[],
+	);
+});
+
+test('a claimer does not spawn when all GCL claim slots are used', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		game: {
+			gcl: { level: 1 },
+			rooms: {
+				W1N1: {
+					controller: { my: true },
+				},
+			},
+		},
+	});
+
+	spawn.memory.claimRoom = 'W2N2';
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.equal(
+		spawnAttempts.some((attempt) => attempt.role === 'claimer'),
+		false,
+	);
+});
+
+test('a claimer spawns when GCL has an available claim slot', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 650,
+		energyCapacity: 650,
+		game: {
+			gcl: { level: 2 },
+			rooms: {
+				W1N1: {
+					controller: { my: true },
+				},
+			},
+		},
+	});
+
+	spawn.memory.claimRoom = 'W2N2';
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['claimer'],
+		'a claimer should be spawned when GCL is available',
+	);
+
+	assert.equal(
+		Object.hasOwn(spawn.memory, 'claimRoom'),
+		false,
+		'a successful claimer spawn should remove the claim order',
+	);
+});
+
+test('a claimer does not spawn without a claim order', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 1000,
+		energyCapacity: 1000,
+		game: {
+			gcl: { level: 2 },
+			rooms: {
+				W1N1: {
+					controller: { my: true },
+				},
+			},
+		},
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+		'a claimer should not be spawned when no claim exists',
+	);
+});
+
+test('a claimer does not spawn without sufficient energy GCL has an available claim slot the claim order remains', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 649,
+		energyCapacity: 1000,
+		game: {
+			gcl: { level: 2 },
+			rooms: {
+				W1N1: {
+					controller: { my: true },
+				},
+			},
+		},
+	});
+
+	spawn.memory.claimRoom = 'W2N2';
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+		'a claimer should not be spawned when energy is not available',
+	);
+
+	assert.equal(
+		Object.hasOwn(spawn.memory, 'claimRoom'),
+		true,
+		'an unsuccessful claimer spawn should retain the claim order',
+	);
+
+	assert.equal(
+		spawn.memory.claimRoom,
+		'W2N2',
+		'an unsuccessful claimer spawn should retain the original claim order',
+	);
+});
+
+test('a busy claimer spawn attempt retains the claimer order', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 650,
+		containerEnergy: 1000,
+		spawnResults: { claimer: ERR_BUSY },
+	});
+
+	spawn.memory.claimRoom = 'W2N2';
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['claimer'],
+	);
+
+	assert.equal(
+		Object.hasOwn(spawn.memory, 'claimRoom'),
+		true,
+		'an unsuccessful claimer spawn should retain the claim order',
+	);
+
+	assert.equal(
+		spawn.memory.claimRoom,
+		'W2N2',
+		'an unsuccessful claimer spawn should retain the original claim order',
+	);
+});
+
+test('an error in claimer spawn attempt retains the claimer order', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 650,
+		containerEnergy: 1000,
+		// Force an API failure after the energy eligibility check passes.
+		spawnResults: { claimer: ERR_NOT_ENOUGH_ENERGY },
+	});
+
+	spawn.memory.claimRoom = 'W2N2';
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['claimer'],
+	);
+
+	assert.equal(
+		Object.hasOwn(spawn.memory, 'claimRoom'),
+		true,
+		'an unsuccessful claimer spawn should retain the claim order',
+	);
+
+	assert.equal(
+		spawn.memory.claimRoom,
+		'W2N2',
+		'an unsuccessful claimer spawn should retain the original claim order',
 	);
 });
