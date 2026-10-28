@@ -26,7 +26,9 @@ module.exports = {
 		if (creep.memory.working === true) {
 			// find all walls in the room
 			const walls = creep.room.find(FIND_STRUCTURES, {
-				filter: (s) => s.structureType === STRUCTURE_WALL,
+				filter: (s) =>
+					s.structureType === STRUCTURE_WALL ||
+					s.structureType === STRUCTURE_RAMPART,
 			});
 
 			let target = undefined;
@@ -46,14 +48,14 @@ module.exports = {
 				}
 
 				// if there is one
-				if (target !== undefined) {
+				if (target !== null) {
 					// break the loop
 					break;
 				}
 			}
 
 			// if we find a wall that has to be repaired
-			if (target !== undefined) {
+			if (target !== null) {
 				// try to repair it, if not in range
 				if (creep.repair(target) === ERR_NOT_IN_RANGE) {
 					// move towards it

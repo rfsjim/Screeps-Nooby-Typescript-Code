@@ -1,5 +1,7 @@
 const roleBuilder = require('./role.builder');
 
+// TODO: Check intents behaviour - withdraw() and repair() are different action categories can perform both in one tick
+
 module.exports = {
 	// a function to run the logic for this role
 	/** @param {Creep} creep */
@@ -32,7 +34,9 @@ module.exports = {
 				// a property called filter which can be a function
 				// we use the arrow operator to define it
 				filter: (s) =>
-					s.hits < s.hitsMax && s.structureType !== STRUCTURE_WALL,
+					s.hits < s.hitsMax &&
+					s.structureType !== STRUCTURE_WALL &&
+					s.structureType !== STRUCTURE_RAMPART,
 			});
 
 			// if we find one
