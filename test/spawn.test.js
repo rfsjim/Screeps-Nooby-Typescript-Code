@@ -35,6 +35,8 @@ function installScreepsGlobals() {
 		STRUCTURE_STORAGE: 'storage',
 		STRUCTURE_WALL: 'constructedWall',
 		STRUCTURE_RAMPART: 'rampart',
+		STRUCTURE_EXTRACTOR: 'extractor',
+		STRUCTURE_TERMINAL: 'terminal',
 		ORDER_BUY: 'buy',
 		WORK: 'work',
 		CARRY: 'carry',
@@ -94,13 +96,27 @@ function createMockRoom({
 	sources = [],
 	structures = [],
 	constructionSites = [],
+	controller = {
+		my: true,
+		level: 1,
+	},
 	energy,
 	energyCapacity = energy,
 }) {
+	const storage = structures.find(
+		(structure) => structure.structureType === STRUCTURE_STORAGE,
+	);
+	const terminal = structures.find(
+		(structure) => structure.structureType === STRUCTURE_TERMINAL,
+	);
 	return {
 		name: 'W1N1',
 		energyAvailable: energy,
 		energyCapacityAvailable: energyCapacity,
+		controller,
+		storage,
+		terminal,
+
 		find(type, options = {}) {
 			let results = [];
 			if (type === FIND_MY_CREEPS) {
@@ -111,6 +127,11 @@ function createMockRoom({
 			}
 			if (type === FIND_STRUCTURES) {
 				results = structures;
+			}
+			if (type === FIND_MY_STRUCTURES) {
+				results = structures.filter(
+					(structure) => structure.my !== false,
+				);
 			}
 			if (type === FIND_CONSTRUCTION_SITES) {
 				results = constructionSites;
@@ -142,6 +163,7 @@ function createSpawnScenario({
 			repairer: 0,
 			builder: 0,
 			wallRepairer: 0,
+			extractor: 0,
 			...minCreeps,
 		},
 		minLongDistanceHarvesters: {},
@@ -224,12 +246,16 @@ function createStructure({
 	hits = STRUCTURE_HITS,
 	hitsMax = STRUCTURE_HITS,
 	structureType,
+	my = true,
+	store = {},
 } = {}) {
 	return {
-		structureType: structureType,
 		id,
+		my,
+		structureType: structureType,
 		hits,
 		hitsMax,
+		store,
 	};
 }
 
@@ -261,6 +287,10 @@ function createGrowingRoomScenario({
 	sources = [createSource()],
 	structures = [createSourceContainer()],
 	constructionSites = [],
+	controller = {
+		my: true,
+		level: 1,
+	},
 	energy = 600,
 	energyCapacity = energy,
 	minCreeps = {},
@@ -270,8 +300,9 @@ function createGrowingRoomScenario({
 		room: createMockRoom({
 			creeps,
 			sources,
-			structures: structures,
+			structures,
 			constructionSites,
+			controller,
 			energy,
 			energyCapacity,
 		}),
@@ -884,3 +915,235 @@ test('an error in claimer spawn attempt retains the claimer order', () => {
 		'an unsuccessful claimer spawn should retain the original claim order',
 	);
 });
+
+test('an extractor role is not spawned before RCL6', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage, terminal],
+		controller: {
+			my: true,
+			level: 5,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('an extractor role is spawned at RCL6 with required structures', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage, terminal],
+		controller: {
+			my: true,
+			level: 6,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['extractor'],
+	);
+});
+
+test('an extractor role is not spawned without an extractor', () => {
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [storage, terminal],
+		controller: {
+			my: true,
+			level: 6,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('an extractor role is not spawned without a storage', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, terminal],
+		controller: {
+			my: true,
+			level: 6,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('an extractor role is not spawned without a terminal', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage],
+		controller: {
+			my: true,
+			level: 6,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+test('an extractor role is spawned at RCL7 with required structures', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage, terminal],
+		controller: {
+			my: true,
+			level: 7,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['extractor'],
+	);
+});
+
+test('an extractor role is not spawned at RCL7 with an unowned extractor', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+		my: false,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: {},
+	});
+
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage, terminal],
+		controller: {
+			my: true,
+			level: 7,
+		},
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		[],
+	);
+});
+
+/**
+ * TODO:
+Verify that the extractor lookup isn't performed below RCL6.
+
+You could use a mock room.find() that throws if asked to search for extractors at RCL5, although that may be more mocking machinery than this warrants.
+ */
