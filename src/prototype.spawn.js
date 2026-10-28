@@ -171,6 +171,8 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 					);
 					if (attempt.result === OK) {
 						name = attempt.name;
+						//TODO What happens if the spawn stops existing before this was spawned?
+						// May need a state machine pending → spawning → travelling → claimed
 						delete this.memory.claimRoom;
 						return;
 					}
