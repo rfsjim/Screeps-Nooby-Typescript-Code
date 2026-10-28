@@ -7,6 +7,7 @@ const listOfRoles = [
 	'repairer',
 	'builder',
 	'wallRepairer',
+	'extractor',
 ];
 
 // create a new function for StructureSpawn
@@ -59,6 +60,14 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 			filter: (s) => s.my,
 		}).length > 0;
 	const hasAvailableClaimSlot = ownedRoomCount < Game.gcl.level;
+	let hasExtractor = false;
+	if (room.controller?.level >= 6) {
+		hasExtractor =
+			room.find(FIND_MY_STRUCTURES, {
+				filter: (structure) =>
+					structure.structureType === STRUCTURE_EXTRACTOR,
+			}).length > 0;
+	}
 
 	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
 	const needsEnergyTransport = !hasHarvester && !hasLorry;
@@ -83,6 +92,11 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 		hasRecoveryEnergy &&
 		hasTransportableEnergy &&
 		needsEnergyTransport;
+	const canSpawnExtractor =
+		room.controller?.level >= 6 &&
+		hasExtractor &&
+		room.storage !== undefined &&
+		room.terminal !== undefined;
 
 	if (needsEconomyRecovery) {
 		if (canSpawnLorry) {
@@ -199,6 +213,9 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 							continue;
 						}
 						if (role === 'wallRepairer' && !needsWallRepairs) {
+							continue;
+						}
+						if (role === 'extractor' && !canSpawnExtractor) {
 							continue;
 						}
 
