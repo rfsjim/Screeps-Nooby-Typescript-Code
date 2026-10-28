@@ -47,7 +47,7 @@ module.exports = {
 				creep.memory.storage = container.id;
 			}
 			// if one was found
-			if (creep.memory.storage !== undefined) {
+			if (creep.memory.storage !== null) {
 				// try to withdraw energy, if the container is not in range
 				if (
 					creep.withdraw(
