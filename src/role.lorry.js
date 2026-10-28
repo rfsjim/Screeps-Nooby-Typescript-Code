@@ -133,3 +133,37 @@ module.exports = {
 		}
 	},
 };
+
+/**
+ * TODO:
+ * Guard resource collection against occurring prior to RCL4 and Storage being available.
+ * Job for task management
+ *
+ * const canCollectResources =
+	creep.room.controller?.level >= 4 &&
+	creep.room.storage !== undefined;
+ *
+ * State issues
+ * It can leave with a partial load and then get stuck in gather mode.
+ * creep.store.getFreeCapacity() === 0
+ * if Storage is absent or empty, it can remain in gather mode carrying 80 energy indefinitely, even while extensions need filling.
+ *
+ * Non-energy resources without Storage create a potential deadlock.
+ * if (carriedNonEnergy && storage)
+ * If the lorry picks up minerals or other non-energy resources before Storage exists, this condition cannot complete:
+ *
+ * Current observations OCt 2026 - lorries are not picking up energy on the floor or from tombstones
+ * Consider distance to travel time ratios for most suitable resource to collect
+ * Collection value = Energy expected to recover / Travel Time + Collection Time
+ *
+ * a good candidate for a future regression test: a lorry carrying partial energy, with every delivery destination full and no Storage available.
+ *
+ * also potential hystersis issue - may need different levels for is full and can empty.
+ * Situation	Current behaviour	Possible future behaviour
+150/150 energy	Deliver	Deliver
+75/150, destinations need energy	Deliver	Deliver
+75/150, all destinations full	Wait indefinitely	Return to gathering
+0/150	Gather	Gather
+
+Back log - potentially containers can become a place for energy - with remote containers for upgraders
+ */
