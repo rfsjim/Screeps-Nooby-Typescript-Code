@@ -35,12 +35,12 @@ module.exports = {
 						s.store.getCapacity(RESOURCE_ENERGY),
 			});
 
-			if (structure === undefined) {
+			if (structure === null && creep.room.storage) {
 				structure = creep.room.storage;
 			}
 
 			// if we found one
-			if (structure !== undefined) {
+			if (structure !== null) {
 				// try to transfer energy, if it is not in range
 				if (
 					creep.transfer(structure, RESOURCE_ENERGY) ===
@@ -54,15 +54,13 @@ module.exports = {
 		// if creep is supposed to harvest energy from unclaimed resources
 		else {
 			let target = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
-			if (target !== undefined) {
+			if (target !== null) {
 				// try to pick up dropped resources
 				if (creep.pickup(target) === ERR_NOT_IN_RANGE) {
 					// move to resource
 					creep.moveTo(target);
 				}
-			} else if (
-				creep.pos.findClosestByRange(FIND_TOMBSTONES) !== undefined
-			) {
+			} else if (creep.pos.findClosestByRange(FIND_TOMBSTONES) !== null) {
 				// try to find any tombstones
 				target = creep.pos.findClosestByRange(FIND_TOMBSTONES);
 				if (creep.withdraw(target) === ERR_NOT_IN_RANGE) {
