@@ -40,12 +40,12 @@ module.exports = {
 					},
 				);
 
-				if (structure === undefined) {
+				if (structure === null && creep.room.storage) {
 					structure = creep.room.storage;
 				}
 
 				// if we found one
-				if (structure !== undefined) {
+				if (structure !== null) {
 					// try to transfer energy, if it is not in range
 					if (
 						creep.transfer(structure, RESOURCE_ENERGY) ===
