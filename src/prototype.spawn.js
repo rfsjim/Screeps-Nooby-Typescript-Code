@@ -316,36 +316,45 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 	// have one move part per non move part and ensure that specified workParts can be made otherwise reduce
 	// calculate min required energy for each part group
 	const minFloorLDHPartsGroup =
-		BODYPART_COST['work'] +
-		BODYPART_COST['carry'] +
-		BODYPART_COST['move'] * 2;
+		BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE] * 2;
+	// Some maths -
+	// Unreserved remote 1500 energy / 300 ticks - 5 energy/tick work rate - 3 work parts to sustain
+	// Owned/reserved 3000 energy / 300 ticks - 10 energy/tick work rate - 5 work parts to sustain
+	// source keeper room 4000 energy / 3000 ticks - 13.33 energy/tick work rate - 7 work parts to sustain
+	// assuming plains no boosts no fatigue modifiers
+	// Configuration	Cost	Capacity	Harvest
+	// 2W / 4C / 3M	550	200	4/tick
+	// 3W / 6C / 5M	850	300	6/tick
+	// 3W / 8C / 6M	1000	400	6/tick
+	// 5W / 10C / 8M	1400	500	10/tick
 	// ensure number of work parts is not more than can be balanced out
-	numberOfWorkParts = Math.min(numberOfWorkParts, Math.floor(50 / 4));
-	// check sufficient energy available
-	if (numberOfWorkParts * minFloorLDHPartsGroup <= energy) {
-		const body = [];
-		for (let i = 0; i < numberOfWorkParts; i++) {
-			body.push(WORK);
-		}
-	}
+	numberOfWorkParts = Math.min(
+		numberOfWorkParts,
+		Math.floor(MAX_CREEP_SIZE / 4),
+		Math.floor(energy / minFloorLDHPartsGroup),
+	);
+
+	const body = [];
 
 	// take cost of work and move from available energy to create rest of body parts using left over available energy
-	const costOfWorkMove = BODYPART_COST['work'] + BODYPART_COST['move'];
-	energy -= costOfWorkMove * numberOfWorkParts;
+	const costOfWorkMove = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
+	const remainingEnergy = energy - costOfWorkMove * numberOfWorkParts;
+	const numberOfCarryParts = Math.min(
+		Math.floor(
+			remainingEnergy / (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]),
+		),
+		Math.floor(50 - numberOfWorkParts),
+	);
 
-	// numberOfParts is remaining parts to add to creep - move and carry cost
-	let numberOfParts = Math.floor(
-		energy / (BODYPART_COST['move'] + BODYPART_COST['carry']),
-	);
-	// cap final creep body parts size below 50 limit
-	numberOfParts = Math.min(
-		numberOfParts,
-		Math.floor(((50 - numberOfWorkParts) * 2) / 2),
-	);
-	for (let i = 0; i < numberOfParts; i++) {
+	for (let i = 0; i < numberOfWorkParts; i++) {
+		body.push(WORK);
+	}
+
+	for (let i = 0; i < numberOfCarryParts; i++) {
 		body.push(CARRY);
 	}
-	for (let i = 0; i < numberOfParts; i++) {
+
+	for (let i = 0; i < numberOfWorkParts + numberOfCarryParts; i++) {
 		body.push(MOVE);
 	}
 
