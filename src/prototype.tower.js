@@ -22,12 +22,12 @@ StructureTower.prototype.defend = function () {
 			FIND_STRUCTURES,
 			{
 				filter: (s) =>
-					s.hits < s.hitsMax &&
+					s.hits < s.hitsMax * 0.6 &&
 					s.structureType !== STRUCTURE_WALL &&
 					s.structureType !== STRUCTURE_RAMPART,
 			},
 		);
-		if (closestDamagedStructure) {
+		if (closestDamagedStructure && ratio >= 0.5 && !this.busy) {
 			this.repair(closestDamagedStructure);
 		}
 	}
