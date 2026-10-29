@@ -727,7 +727,7 @@ test('an error in claimer spawn attempt retains the claimer order', () => {
 	);
 });
 
-test('an extractor role is not spawned before RCL6', () => {
+test('an extractor structure is not looked for before RCL6', () => {
 	const extractor = createStructure({
 		id: 'extractor-1',
 		structureType: STRUCTURE_EXTRACTOR,
@@ -752,8 +752,24 @@ test('an extractor role is not spawned before RCL6', () => {
 		},
 		minCreeps: { extractor: 1 },
 	});
+	const find = spawn.room.find.bind(spawn.room);
+	spawn.room.find = (type, options) => {
+		const results = find(type, options);
 
-	spawn.spawnCreepsIfNecessary();
+		if (
+			spawn.room.controller.level < 6 &&
+			type === FIND_MY_STRUCTURES &&
+			results.includes(extractor)
+		) {
+			throw new Error(
+				'extractor structures cannot be discovered before RCL6',
+			);
+		}
+
+		return results;
+	};
+
+	assert.doesNotThrow(() => spawn.spawnCreepsIfNecessary());
 
 	assert.deepEqual(
 		spawnAttempts.map((attempt) => attempt.role),
@@ -951,10 +967,3 @@ test('an extractor role is not spawned at RCL7 with an unowned extractor', () =>
 		[],
 	);
 });
-
-/**
- * TODO:
-Verify that the extractor lookup isn't performed below RCL6.
-
-You could use a mock room.find() that throws if asked to search for extractors at RCL5, although that may be more mocking machinery than this warrants.
- */
