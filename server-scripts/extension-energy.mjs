@@ -1,20 +1,33 @@
-const [operation, room, amountText] = process.argv.slice(2);
-const amount = Number(amountText);
+const [room, rclText, amountText] = process.argv.slice(2);
+let amount = Number(amountText);
+const rcl = Number(rclText);
 
 if (
-  !["set", "add"].includes(operation) ||
   !room ||
+  !Number.isSafeInteger(rcl) ||
+  rcl < 2 ||
+  rcl > 8 ||
   !Number.isSafeInteger(amount) ||
   amount < 0
 ) {
   console.error(
-    "Usage: node server-scripts/extension-energy.mjs <set|add> <room> <amount>"
+    "Usage: node server-scripts/extension-energy.mjs <room> <rcl 2-8> <amount>"
   );
   process.exit(1);
 }
 
-const operator = operation === "set" ? "$set" : "$inc";
+const extensionCapacity = {
+  2: 50,
+  3: 50,
+  4: 50,
+  5: 50,
+  6: 50,
+  7: 100,
+  8: 200,
+};
+
+amount = Math.min(amount, extensionCapacity[rcl]);
 
 console.log(
-  `storage.db['rooms.objects'].update({ type: 'extension', room: ${JSON.stringify(room)} }, { ${operator}: { 'store.energy': ${amount} } })`
+  `storage.db['rooms.objects'].update({ type: 'extension', room: ${JSON.stringify(room)} }, { $set: { 'store.energy': ${amount} } })`
 );
