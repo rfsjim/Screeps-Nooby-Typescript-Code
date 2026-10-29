@@ -6,6 +6,7 @@ function installScreepsGlobals() {
 	const constants = {
 		OK: 0,
 		ERR_NOT_ENOUGH_ENERGY: -6,
+		ERR_INVALID_ARGS: -10,
 		ERR_BUSY: -4,
 		FIND_EXIT_TOP: 1,
 		FIND_EXIT_RIGHT: 3,

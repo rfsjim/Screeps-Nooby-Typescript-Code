@@ -967,3 +967,147 @@ test('an extractor role is not spawned at RCL7 with an unowned extractor', () =>
 		[],
 	);
 });
+
+const longDistanceHarvesterBodies = [
+	{ energy: 250, workParts: 1, work: 1, carry: 1, move: 2, cost: 250 },
+	{ energy: 250, workParts: 2, work: 1, carry: 1, move: 2, cost: 250 },
+	{ energy: 500, workParts: 2, work: 2, carry: 2, move: 4, cost: 500 },
+	{
+		energy: 1000,
+		workParts: 2,
+		work: 2,
+		carry: 7,
+		move: 9,
+		cost: 1000,
+	},
+	{
+		energy: 1500,
+		workParts: 2,
+		work: 2,
+		carry: 12,
+		move: 14,
+		cost: 1500,
+	},
+	{
+		energy: 12900,
+		workParts: 2,
+		work: 2,
+		carry: 23,
+		move: 25,
+		cost: 2600,
+	},
+	{
+		energy: 3000,
+		workParts: 5,
+		work: 5,
+		carry: 20,
+		move: 25,
+		cost: 2750,
+	},
+];
+
+for (const expected of longDistanceHarvesterBodies) {
+	test(`a long-distance harvester uses the expected body with ${expected.energy} energy and ${expected.workParts} requested WORK parts`, () => {
+		const { spawn, spawnAttempts } = createSpawnScenario({
+			room: createMockRoom({ energy: expected.energy }),
+		});
+
+		const result = spawn.createLongDistanceHarvester(
+			expected.energy,
+			expected.workParts,
+			'W1N1',
+			'W2N2',
+			0,
+		);
+
+		assert.equal(result.result, OK);
+		assert.equal(spawnAttempts.length, 1);
+
+		const [attempt] = spawnAttempts;
+		const count = (part) =>
+			attempt.body.filter((bodyPart) => bodyPart === part).length;
+		const actualCost = attempt.body.reduce(
+			(total, part) => total + BODYPART_COST[part],
+			0,
+		);
+
+		assert.deepEqual(
+			{
+				work: count(WORK),
+				carry: count(CARRY),
+				move: count(MOVE),
+			},
+			{
+				work: expected.work,
+				carry: expected.carry,
+				move: expected.move,
+			},
+		);
+		assert.equal(actualCost, expected.cost);
+		assert.equal(
+			attempt.body.length,
+			expected.work + expected.carry + expected.move,
+		);
+		assert.ok(attempt.body.length <= MAX_CREEP_SIZE);
+		assert.ok(actualCost <= expected.energy);
+		assert.deepEqual(attempt.memory, {
+			role: 'longDistanceHarvester',
+			home: 'W1N1',
+			target: 'W2N2',
+			sourceIndex: 0,
+			working: false,
+		});
+	});
+}
+
+test('a long-distance harvester requires at least 250 energy', () => {
+	const { spawn, spawnAttempts } = createSpawnScenario({
+		room: createMockRoom({ energy: 249 }),
+	});
+
+	const result = spawn.createLongDistanceHarvester(249, 1, 'W1N1', 'W2N2', 0);
+
+	assert.deepEqual(result, {
+		name: undefined,
+		result: ERR_NOT_ENOUGH_ENERGY,
+	});
+	assert.deepEqual(spawnAttempts, []);
+});
+
+for (const workParts of [0, 6]) {
+	test(`a long-distance harvester rejects ${workParts} requested WORK parts`, () => {
+		const { spawn, spawnAttempts } = createSpawnScenario({
+			room: createMockRoom({ energy: 1500 }),
+		});
+
+		const result = spawn.createLongDistanceHarvester(
+			1500,
+			workParts,
+			'W1N1',
+			'W2N2',
+			0,
+		);
+
+		assert.deepEqual(result, {
+			name: undefined,
+			result: ERR_INVALID_ARGS,
+		});
+		assert.deepEqual(spawnAttempts, []);
+	});
+}
+
+test('a long-distance harvester propagates ERR_BUSY from the spawn', () => {
+	const { spawn, spawnAttempts } = createSpawnScenario({
+		room: createMockRoom({ energy: 250 }),
+		spawnResults: { longDistanceHarvester: ERR_BUSY },
+	});
+
+	const result = spawn.createLongDistanceHarvester(250, 1, 'W1N1', 'W2N2', 0);
+
+	assert.equal(result.name, 'longDistanceHarvester42');
+	assert.equal(result.result, ERR_BUSY);
+	assert.deepEqual(
+		spawnAttempts.map((attempt) => attempt.role),
+		['longDistanceHarvester'],
+	);
+});
