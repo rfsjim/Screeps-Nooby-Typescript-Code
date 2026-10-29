@@ -13,6 +13,10 @@ Using node we can run a script to get a one line command generated back that can
 Returns `storage.db['rooms.objects'].update({ type: 'storage', room: "W7N3" }, { $inc: { 'store.energy': 10000 } })`
 - Set Energy in Storage to - `node server-scripts/storage-energy.mjs set W7N3 10000`
 Returns `storage.db['rooms.objects'].update({ type: 'storage', room: "W7N3" }, { $set: { 'store.energy': 10000 } })`
+- Set Energy in all Room Extensions - `node .\server-scripts\extension-energy.mjs W1N1 8 50` Returns `storage.db['rooms.objects'].update({ type: 'extension', room: "W1N1" }, { $set: { 'store.energy': 50 } })`
+- Adjust Controller Progress - `node server-scripts/controller-progress.mjs <set|add> <controllerId> <amount>` Returns `storage.db['rooms.objects'].update({ _id: aefb1234567890fe }, { $inc: { progress: 679 } })`
+- Adjust Room RCL - `node server-scripts/room-rcl.mjs <set|add> <controllerId> <level>`
+- Adjust Construction Site Progress - `node server-scripts/construction-site-progress.mjs <set|add> <room> <amount>`
 
 ## Other CLI Commands
 ### Help
