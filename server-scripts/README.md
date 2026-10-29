@@ -17,6 +17,7 @@ Returns `storage.db['rooms.objects'].update({ type: 'storage', room: "W7N3" }, {
 - Adjust Controller Progress - `node server-scripts/controller-progress.mjs <set|add> <controllerId> <amount>` Returns `storage.db['rooms.objects'].update({ _id: aefb1234567890fe }, { $inc: { progress: 679 } })`
 - Adjust Room RCL - `node server-scripts/room-rcl.mjs <set|add> <controllerId> <level>`
 - Adjust Construction Site Progress - `node server-scripts/construction-site-progress.mjs <set|add> <room> <amount>`
+- Adjust Structure Hit Points - `node server-scripts/structure-modify-hits.mjs <room> <structure-type> <hits>` OR `node server-scripts/structure-modify-hits.mjs <structure-id> <hits>`
 
 ## Other CLI Commands
 ### Help
@@ -33,6 +34,12 @@ Returns `storage.db['rooms.objects'].update({ type: 'storage', room: "W7N3" }, {
 - Find Spawns in Given Room `storage.db['rooms.objects'].find({ type: 'spawn', room: 'W5N8' })`
 - Find Spawn by ID `storage.db['rooms.objects'].findOne({ _id: 'acc164a51cbfb59' });`
 - Find First Spawn Object `storage.db['rooms.objects'].findOne({ type: 'spawn' });`
+
+### Bots
+- help(bots)
+
+### Strongholds
+- help(strongholds)
 
 ### When Private Server Gets Buggy
 Documented issues where all Spawns will get 0/0 energy store
