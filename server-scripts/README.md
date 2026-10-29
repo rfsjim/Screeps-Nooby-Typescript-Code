@@ -5,6 +5,10 @@ This folder contains some commands available when running a local private server
 
 Using node we can run a script to get a one line command generated back that can be copy and pasted into the private server CLI interface.
 
+- User Management - Change GCL, GPL, Market Credits, CPU Limit -
+	- `node server-scripts/user-management.mjs <username> <gcl|power|money|cpu|active> <set|add> <non-negative-integer>`
+	- `node server-scripts/user-management.mjs Alice gcl set 38000000`
+	- `node server-scripts/user-management.mjs Alice money add 5000`
 - Add Energy to Storage - `node server-scripts/storage-energy.mjs add W7N3 10000`
 Returns `storage.db['rooms.objects'].update({ type: 'storage', room: "W7N3" }, { $inc: { 'store.energy': 10000 } })`
 - Set Energy in Storage to - `node server-scripts/storage-energy.mjs set W7N3 10000`
