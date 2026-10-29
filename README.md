@@ -6,6 +6,12 @@
 
 Updating the codebase using a known stable baseline.
 
-[CHANGELOG](./CHANGELOG.md)
-[CODE OF CONDUCT](./CODE_OF_CONDUCT.md)
-[CONTRIBUTING](./CONTRIBUTING.md)
+- [CHANGELOG](./CHANGELOG.md)
+- [CODE OF CONDUCT](./CODE_OF_CONDUCT.md)
+- [CONTRIBUTING](./CONTRIBUTING.md)
+
+Includes a statistical data collector for Long Distance Harvester efficiency. Use `JSON.stringify(Memory.metrics)` to get a current version of the metrics.
+
+CPU Monitoring is available from `JSON.stringify(Memory.stats)`
+
+Helper scripts for developers to use when running a private server for testing and simulation setup are available at [server-scripts](./server-scripts/README.md)
