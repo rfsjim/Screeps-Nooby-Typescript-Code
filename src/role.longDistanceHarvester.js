@@ -69,6 +69,14 @@ module.exports = {
 					structure = creep.room.storage;
 				}
 
+				if (structure === null) {
+					const homeSpawn = creep.room.find(FIND_MY_SPAWNS)[0];
+
+					if (homeSpawn && !creep.pos.isNearTo(homeSpawn)) {
+						creep.moveTo(homeSpawn, { range: 1 });
+					}
+				}
+
 				// if we found one
 				if (structure !== null) {
 					const transferResult = creep.transfer(
