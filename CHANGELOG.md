@@ -16,6 +16,14 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Feat: Long Distance Harvester
 - Feat: Analytical Timing Recording of Long Distance Harvester Trips to assist with optimal body calculations
 - Feat: Server Management and Testing Scripts
+- Feat: Private Server Script for GCL Power Money and CPU management
+- Feat: RCL Management Tool
+- Feat: Controller Progress Tool
+- Feat: Energy Extension Tool
+- Feat: Construction Site Progress Tool
+- Feat: Tooling to modify structure hits
+- Feat module es testing
+- Feat: Add testing for ES Modules with mjs
 ### Fixed
 
 - Fix: Fixed premature access to Game.spawns['Spawn1'].room
@@ -33,3 +41,4 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Targetting Logic
 - Fix: Long Distance Harvester Work Part Number Argument Restriction Clamping
 - Fix: Error moving between rooms when all targets return null
+- Fix: Clamp Energy based on RCL
