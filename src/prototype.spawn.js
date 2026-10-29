@@ -342,7 +342,17 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 			result: ERR_NOT_ENOUGH_ENERGY,
 		};
 	}
-	// max work parts is 5
+	// numberOfWorkParts is a positive number between 1 and 5
+	if (
+		!Number.isInteger(numberOfWorkParts) ||
+		numberOfWorkParts < 1 ||
+		numberOfWorkParts > 5
+	) {
+		return {
+			name: undefined,
+			result: ERR_INVALID_ARGS,
+		};
+	}
 	// calculate min required energy for each part group
 	const minFloorLDHPartsGroup =
 		BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE] * 2;
