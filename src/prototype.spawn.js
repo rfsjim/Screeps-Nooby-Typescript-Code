@@ -177,7 +177,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				// check available energy and try to spawn claimer
 				if (
 					currentEnergy >=
-					BODYPART_COST['claim'] + BODYPART_COST['move']
+					BODYPART_COST['claim'] + BODYPART_COST[MOVE]
 				) {
 					const attempt = this.createClaimer(
 						this.memory.claimRoom,
@@ -201,7 +201,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				if (
 					role === 'lorry' &&
 					currentEnergy >=
-						BODYPART_COST['carry'] * 2 + BODYPART_COST['move']
+						BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE]
 				) {
 					name = this.createLorry(currentEnergy);
 				} else if (role !== 'lorry') {
@@ -251,13 +251,27 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 					this.memory.minLongDistanceHarvesters[roomName] &&
 				currentEnergy === maxEnergy
 			) {
-				name = this.createLongDistanceHarvester(
+				const attempt = this.createLongDistanceHarvester(
 					maxEnergy,
 					2,
 					room.name,
 					roomName,
 					0,
 				);
+
+				if (attempt.result === OK) {
+					name = attempt.name;
+					break;
+				}
+
+				if (
+					attempt.result === ERR_BUSY ||
+					attempt.result === ERR_INVALID_ARGS ||
+					attempt.result === ERR_NOT_ENOUGH_ENERGY
+				) {
+					console.log(attempt.result);
+					return;
+				}
 			}
 		}
 	}
@@ -279,10 +293,16 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
 	// create balance creep as big as possible with the given energy
 	// min parts group is a work move carry
+	if (energy < 200) {
+		return {
+			name: undefined,
+			result: ERR_NOT_ENOUGH_ENERGY,
+		};
+	}
 	const minFloorRequiredEnergy =
-		BODYPART_COST['work'] + BODYPART_COST['move'] + BODYPART_COST['carry'];
+		BODYPART_COST[WORK] + BODYPART_COST[MOVE] + BODYPART_COST[CARRY];
 	let numberofParts = Math.floor(energy / minFloorRequiredEnergy);
-	numberofParts = Math.min(numberofParts, Math.floor(50 / 3));
+	numberofParts = Math.min(numberofParts, Math.floor(MAX_CREEP_SIZE / 3));
 	const body = [];
 	for (let i = 0; i < numberofParts; i++) {
 		body.push(WORK);
@@ -313,28 +333,25 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 	sourceIndex,
 ) {
 	// create a body array first with requested work parts
+	const body = [];
 	// have one move part per non move part and ensure that specified workParts can be made otherwise reduce
+	// min required energy for smallest creep is 250
+	if (energy < 250) {
+		return {
+			name: undefined,
+			result: ERR_NOT_ENOUGH_ENERGY,
+		};
+	}
+	// max work parts is 5
 	// calculate min required energy for each part group
 	const minFloorLDHPartsGroup =
 		BODYPART_COST[WORK] + BODYPART_COST[CARRY] + BODYPART_COST[MOVE] * 2;
-	// Some maths -
-	// Unreserved remote 1500 energy / 300 ticks - 5 energy/tick work rate - 3 work parts to sustain
-	// Owned/reserved 3000 energy / 300 ticks - 10 energy/tick work rate - 5 work parts to sustain
-	// source keeper room 4000 energy / 3000 ticks - 13.33 energy/tick work rate - 7 work parts to sustain
-	// assuming plains no boosts no fatigue modifiers
-	// Configuration	Cost	Capacity	Harvest
-	// 2W / 4C / 3M	550	200	4/tick
-	// 3W / 6C / 5M	850	300	6/tick
-	// 3W / 8C / 6M	1000	400	6/tick
-	// 5W / 10C / 8M	1400	500	10/tick
 	// ensure number of work parts is not more than can be balanced out
 	numberOfWorkParts = Math.min(
 		numberOfWorkParts,
-		Math.floor(MAX_CREEP_SIZE / 4),
+		Math.floor(MAX_CREEP_SIZE / 10),
 		Math.floor(energy / minFloorLDHPartsGroup),
 	);
-
-	const body = [];
 
 	// take cost of work and move from available energy to create rest of body parts using left over available energy
 	const costOfWorkMove = BODYPART_COST[WORK] + BODYPART_COST[MOVE];
@@ -343,7 +360,7 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 		Math.floor(
 			remainingEnergy / (BODYPART_COST[CARRY] + BODYPART_COST[MOVE]),
 		),
-		Math.floor(50 - numberOfWorkParts),
+		Math.floor(MAX_CREEP_SIZE / 2) - numberOfWorkParts,
 	);
 
 	for (let i = 0; i < numberOfWorkParts; i++) {
@@ -367,11 +384,12 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 			working: false,
 		},
 	};
-	return this.spawnCreep(
-		body,
-		'longDistanceHarvester' + Game.time,
-		creepMemory,
-	);
+	const name = 'longDistanceHarvester' + Game.time;
+
+	return {
+		name: name,
+		result: this.spawnCreep(body, name, creepMemory),
+	};
 };
 
 // create function to spawn claimer
@@ -409,7 +427,7 @@ StructureSpawn.prototype.createLorry = function (energy) {
 		energy / (BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE]),
 	);
 	// Make sure creep isn't too big
-	numberOfParts = Math.min(numberOfParts, Math.floor(50 / 3));
+	numberOfParts = Math.min(numberOfParts, Math.floor(MAX_CREEP_SIZE / 3));
 	const body = [];
 	for (let i = 0; i < numberOfParts * 2; i++) {
 		body.push(CARRY);
