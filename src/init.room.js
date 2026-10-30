@@ -2,20 +2,19 @@ export class initRoom {
 	constructor(room) {
 		this.room = room;
 		this.sources = Game.rooms[this.room].find(FIND_SOURCES);
-		this.terrain = new Room.Terrain(Game.rooms[this.room]);
+		this.terrain = new Room.Terrain(Game.rooms[this.room.name]);
 	}
 
 	getSources() {
-		for (const id in this.sources) {
-			Game.rooms[this.room].memory.sMiners[id] = [];
-		}
+		this.sources.forEach((source) => {
+			Game.rooms[this.room].memory.sMiners[source.id] = 0;
+		});
 
 		return Object.keys(this.sources).length;
 	}
 
 	ensureContainers() {
-		for (const id in this.sources) {
-			const source = Game.getObjectById(id);
+		this.sources.forEach((source) => {
 			let x = source.pos.x;
 			let y = source.pos.y;
 			for (let i = x - 1; i < x + 2; i++) {
@@ -32,23 +31,28 @@ export class initRoom {
 							);
 							let structuresHere =
 								currentPosition.lookFor(LOOK_STRUCTURES);
-							if (!structuresHere) {
+							if (structuresHere.length === 0) {
 								structuresHere = currentPosition.lookFor(
 									LOOK_CONSTRUCTION_SITES,
 								);
 							}
-							if (!structuresHere) {
+							if (structuresHere.length === 0) {
 								continue;
 							}
-							for (const structureType in structuresHere) {
-								if (structureType === STRUCTURE_CONTAINER) {
+							for (const structure in structuresHere) {
+								if (
+									structure.structureType ===
+									STRUCTURE_CONTAINER
+								) {
 									return 1;
 								}
 							}
 					}
 				}
 			}
-			// No container found around source - createConstructionSite for container
+			// No container found around source
+			// return candidate positions for container
+			let candidatePositions;
 			x = source.pos.x;
 			y = source.pos.y;
 			for (let i = x - 1; i < x + 2; i++) {
@@ -58,17 +62,15 @@ export class initRoom {
 							// it is wall no construction site can go here
 							break;
 						default:
-							const currentPosition = new RoomPosition(
+							candidatePositions.push = new RoomPosition(
 								i,
 								j,
 								this.room,
 							);
-							return currentPosition.createConstructionSite(
-								STRUCTURE_CONTAINER,
-							);
 					}
 				}
 			}
-		}
+			return candidatePositions;
+		});
 	}
 }

@@ -15,6 +15,7 @@ const Phases = [
 		SpawnPeriod: 25,
 		checkGoal: (room) => {
 			// First goal build a container for each source, five extensions and a storage
+			// Covers RCL1 - RCL4
 			let desiredExtensionCount = 5,
 				desiredContainerCount =
 					(room.find(FIND_SOURCES) || {}).length || 0;
@@ -34,9 +35,6 @@ const Phases = [
 			}
 			return false;
 		},
-		Harvester: {
-			count: 2,
-		},
 		Upgrader: {
 			count: 4,
 		},
@@ -44,9 +42,6 @@ const Phases = [
 			count: 4,
 		},
 		Claimer: {
-			count: 0,
-		},
-		Cleaner: {
 			count: 0,
 		},
 		RoleExtractor: {
@@ -85,9 +80,6 @@ const Phases = [
 			}
 			return false;
 		},
-		Harvester: {
-			count: 1,
-		},
 		Upgrader: {
 			count: 3,
 		},
@@ -104,9 +96,6 @@ const Phases = [
 			count: LOOK_SOURCES,
 		},
 		Claimer: {
-			count: 0,
-		},
-		Cleaner: {
 			count: 0,
 		},
 		RoleExtractor: {
@@ -126,9 +115,6 @@ const Phases = [
 		checkLevelPeriod: 1001,
 		SpawnPeriod: 50,
 		checkGoal: () => false,
-		Harvester: {
-			count: 1,
-		},
 		Upgrader: {
 			count: 2,
 		},
@@ -146,9 +132,6 @@ const Phases = [
 		},
 		Lorry: {
 			count: LOOK_SOURCES,
-		},
-		Cleaner: {
-			count: 1,
 		},
 		Claimer: {
 			count: 0,
@@ -304,16 +287,12 @@ const init = {
 
 				if (!Memory.spawns[spawnName].minCreeps) {
 					Memory.spawns[spawnName].minCreeps = {};
-					Memory.spawns[spawnName].minCreeps.harvester =
-						phase.Harvester.count;
 					Memory.spawns[spawnName].minCreeps.lorry =
 						phase.Lorry.count;
 					Memory.spawns[spawnName].minCreeps.claimer =
 						phase.Claimer.count;
 					Memory.spawns[spawnName].minCreeps.upgrader =
 						phase.Upgrader.count;
-					Memory.spawns[spawnName].minCreeps.cleaner =
-						phase.Cleaner.count;
 					Memory.spawns[spawnName].minCreeps.repairer =
 						phase.Repairer.count;
 					Memory.spawns[spawnName].minCreeps.builder =
