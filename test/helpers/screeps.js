@@ -151,8 +151,10 @@ function createSourceContainer({
 	energy = 0,
 	hits = CONTAINER_HITS,
 	hitsMax = CONTAINER_HITS,
+	id = `container-${adjacentToSourceId}`,
 } = {}) {
 	return {
+		id,
 		structureType: STRUCTURE_CONTAINER,
 		pos: { sourceId: adjacentToSourceId },
 		store: { [RESOURCE_ENERGY]: energy },
