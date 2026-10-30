@@ -2,6 +2,10 @@ module.exports = {
 	// a function to run the logic for this role
 	/** @param {Creep} creep */
 	run: function (creep) {
+		if (creep.room.controller?.level < 4 || !creep.room.storage) {
+			return;
+		}
+		let storage = null;
 		// if creep is bringing energy to the controller but has no energy left
 		if (
 			creep.memory.working === true &&
@@ -37,26 +41,22 @@ module.exports = {
 		// if creep is supposed to get energy
 		// only collect energy from storage
 		else {
-			if (!creep.memory.storage) {
-				// find closest container
-				const container = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-					filter: (s) =>
-						s.structureType === STRUCTURE_STORAGE &&
-						s.store[RESOURCE_ENERGY] > 0,
-				});
-				creep.memory.storage = container.id;
+			// find storage
+			if (
+				creep.room.storage &&
+				creep.room.storage.store[RESOURCE_ENERGY] > 0
+			) {
+				storage = creep.room.storage;
 			}
 			// if one was found
-			if (creep.memory.storage !== null) {
+			if (storage !== null) {
 				// try to withdraw energy, if the container is not in range
 				if (
-					creep.withdraw(
-						Game.getObjectById(creep.memory.storage),
-						RESOURCE_ENERGY,
-					) === ERR_NOT_IN_RANGE
+					creep.withdraw(storage, RESOURCE_ENERGY) ===
+					ERR_NOT_IN_RANGE
 				) {
 					// move towards it
-					creep.moveTo(Game.getObjectById(creep.memory.storage));
+					creep.moveTo(storage);
 				}
 			}
 		}
