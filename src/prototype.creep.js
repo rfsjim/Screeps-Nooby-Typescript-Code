@@ -11,7 +11,6 @@ const roles = {
 	roleExtractor: require('./role.extractor'),
 	cleaner: require('./role.cleaner'),
 	carlDouglas: require('./role.carlDouglas'),
-	storageUpgrader: require('./role.storageUpgrader'),
 };
 
 Creep.prototype.runRole = function () {
