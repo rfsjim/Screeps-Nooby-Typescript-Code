@@ -1,3 +1,8 @@
+/**
+ * Depreciated
+ * Role Upgrader performs same tasks
+ */
+
 module.exports = {
 	// a function to run the logic for this role
 	/** @param {Creep} creep */
