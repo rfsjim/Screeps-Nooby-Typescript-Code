@@ -136,6 +136,9 @@ module.exports = {
 
 /**
  * TODO:
+ * Performs role cleaner role
+ * For dedicated role implementation see
+ * development/colony-v2 032d0359da9d9487c3399c0afacb7e63b0dc3f64
  * Guard resource collection against occurring prior to RCL4 and Storage being available.
  * Job for task management
  *
