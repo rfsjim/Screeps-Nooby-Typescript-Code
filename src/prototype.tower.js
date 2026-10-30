@@ -3,6 +3,7 @@ StructureTower.prototype.busy = 0;
 
 StructureTower.prototype.defend = function () {
 	// find closest hostile mob
+	this.busy = 0;
 	const target = this.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 	// if hostile creep exists
 	if (OK === this.attack(target)) {
