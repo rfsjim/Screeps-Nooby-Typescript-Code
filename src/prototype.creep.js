@@ -9,7 +9,6 @@ const roles = {
 	miner: require('./role.miner'),
 	lorry: require('./role.lorry'),
 	roleExtractor: require('./role.extractor'),
-	cleaner: require('./role.cleaner'),
 	carlDouglas: require('./role.carlDouglas'),
 };
 
