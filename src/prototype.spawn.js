@@ -38,7 +38,8 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	const availableEnergy = currentEnergy + storageEnergy + containerEnergy;
 
 	const canSpawnHarvester = currentEnergy >= 200;
-	//TODO Needed?: const canFundSpecialisedRecovery = currentEnergy >= 800;
+	//TODO Needed? Currently not used:
+	// const canFundSpecialisedRecovery = currentEnergy >= 800;
 	const hasRecoveryEnergy = availableEnergy >= 800;
 	const ownedRoomCount = Object.values(Game.rooms).filter(
 		(room) => room.controller?.my,
@@ -168,68 +169,75 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	// if none of others caused a spawn check for other required roles
 	if (name === undefined) {
 		for (const role of listOfRoles) {
+			if (role === 'harvester') {
+				continue;
+			}
 			// check if any orders to claim a new room
-			if (
-				role === 'claimer' &&
-				this.memory.claimRoom !== undefined &&
-				hasAvailableClaimSlot
-			) {
+			if (role === 'claimer' && this.memory.claimRoom !== undefined) {
 				// check available energy and try to spawn claimer
-				if (
-					currentEnergy >=
-					BODYPART_COST['claim'] + BODYPART_COST[MOVE]
-				) {
-					const attempt = this.createClaimer(
-						this.memory.claimRoom,
-						'claim',
-					);
+				const claimerRoleCost =
+					BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
+				if (!hasAvailableClaimSlot || currentEnergy < claimerRoleCost) {
+					continue;
+				}
+
+				const attempt = this.createClaimer(
+					this.memory.claimRoom,
+					'claim',
+				);
+
+				if (attempt.result === OK) {
+					name = attempt.name;
+					//TODO What happens if the spawn stops existing before this was spawned?
+					// May need a state machine pending → spawning → travelling → claimed
+					delete this.memory.claimRoom;
+					break;
+				}
+
+				return;
+			}
+			// if no claim order continue checking roles
+			if (numberOfCreeps[role] < this.memory.minCreeps[role]) {
+				if (role === 'lorry') {
+					const lorryCost =
+						BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE];
+					if (currentEnergy < lorryCost) {
+						continue;
+					}
+
+					const attempt = this.createLorry(currentEnergy);
+
 					if (attempt.result === OK) {
 						name = attempt.name;
-						//TODO What happens if the spawn stops existing before this was spawned?
-						// May need a state machine pending → spawning → travelling → claimed
-						delete this.memory.claimRoom;
-						return;
+						break;
+					}
+
+					return;
+				}
+				if (currentEnergy === maxEnergy) {
+					if (role === 'builder' && !hasConstructionSites) {
+						continue;
+					}
+					if (role === 'repairer' && !needsRepairs) {
+						continue;
+					}
+					if (role === 'wallRepairer' && !needsWallRepairs) {
+						continue;
+					}
+					if (role === 'extractor' && !canSpawnExtractor) {
+						continue;
+					}
+
+					const attempt = this.createCustomCreep(maxEnergy, role);
+					if (attempt.result === OK) {
+						name = attempt.name;
+						break;
 					}
 
 					if (attempt.result === ERR_BUSY) {
 						return;
 					}
 				}
-			}
-			// if no claim order continue checking roles
-			else if (numberOfCreeps[role] < this.memory.minCreeps[role]) {
-				if (
-					role === 'lorry' &&
-					currentEnergy >=
-						BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE]
-				) {
-					name = this.createLorry(currentEnergy);
-				} else if (role !== 'lorry') {
-					if (currentEnergy === maxEnergy) {
-						if (role === 'builder' && !hasConstructionSites) {
-							continue;
-						}
-						if (role === 'repairer' && !needsRepairs) {
-							continue;
-						}
-						if (role === 'wallRepairer' && !needsWallRepairs) {
-							continue;
-						}
-						if (role === 'extractor' && !canSpawnExtractor) {
-							continue;
-						}
-
-						const attempt = this.createCustomCreep(maxEnergy, role);
-						if (attempt.result === OK) {
-							name = attempt.name;
-						}
-
-						if (attempt.result === ERR_BUSY) {
-							return;
-						}
-					}
-				}
-				break;
 			}
 		}
 	}
