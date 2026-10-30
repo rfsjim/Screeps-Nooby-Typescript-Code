@@ -25,7 +25,7 @@ Creep.prototype.runRole = function () {
 };
 
 Creep.prototype.getEnergy = function (useContainer, useSource) {
-	let container;
+	let container = null;
 	// if the Creep should look for containers
 	if (useContainer) {
 		// find closest container
@@ -44,16 +44,23 @@ Creep.prototype.getEnergy = function (useContainer, useSource) {
 				// move towards it
 				this.moveTo(container);
 			}
+
+			return;
 		}
 	}
 	// if no container was found and the Creep should look for Sources
-	if (container === null || useSource) {
+	if (useSource) {
 		// find closest source
 		const source = this.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
 		// try to harvest energy, if the source is in range
-		if (this.harvest(source) === ERR_NOT_IN_RANGE) {
-			// move towards it
-			this.moveTo(source);
+		if (source !== null) {
+			if (this.harvest(source) === ERR_NOT_IN_RANGE) {
+				// move towards it
+				this.moveTo(source);
+				return;
+			}
+
+			return;
 		}
 	}
 };
