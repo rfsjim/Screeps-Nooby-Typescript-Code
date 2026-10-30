@@ -31,10 +31,6 @@ That identifies three different optimisation objective:
 - **Throughput:** maximise useful work completed per tick.
 - **Lifetime efficiency:** maximise productive work before the creep expires, accounting for travel and spawning.
 
-For a creep with $W$ work parts, its theoretical lifetime energy harvest is:
-```
-$$
-H=2W(1500-T)
-$$
-```
+For a creep with $W$ work parts, its theoretical lifetime energy harvest is:\
+$$H=2W(1500-T)$$
 where $T$ is the total time spent not harvesting.
