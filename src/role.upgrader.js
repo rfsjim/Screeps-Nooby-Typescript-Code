@@ -1,3 +1,10 @@
+/**
+ * TODO
+ * See archived storage only version as reference is functionality is later required
+ * Git Commit - fc017e51bd5e538521e74469d12dac3d64d15507
+ * development/colony-v2 fc017e5
+ **/
+
 module.exports = {
 	/**
 	 * Function to run the logic for this role
