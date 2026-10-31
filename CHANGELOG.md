@@ -24,6 +24,7 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Feat: Tooling to modify structure hits
 - Feat module es testing
 - Feat: Add testing for ES Modules with mjs
+- Feat: Telemetry for can mining operations
 ### Fixed
 
 - Fix: Fixed premature access to Game.spawns['Spawn1'].room
@@ -42,3 +43,9 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Long Distance Harvester Work Part Number Argument Restriction Clamping
 - Fix: Error moving between rooms when all targets return null
 - Fix: Clamp Energy based on RCL
+- Fix: Logic errors within storage Upgrader finding appropriate structure
+- Fix: Logic error with using container OR source for getEnergy
+- Fix: Repair issue where missing source or container would prevent further code from running
+- Fix: Tower busy state never resets after the first successful attack.
+- Fix: Latex Math Notation
+- Fix: Latex Math Notation

@@ -201,6 +201,8 @@ Where:
 - $H_{\text{available}}$ is available `HEAL`
 
 ## Useful Optimisations
+Screeps optimisation is best approached as a series of constrained engineering problems.
+
 |         System         |                          Mathematical question                          |        Practical benefit        |
 |:----------------------:|:-----------------------------------------------------------------------:|:-------------------------------:|
 | Controller upgrading   | How many WORK parts can the energy supply continuously?                 | Avoid idle upgraders            |
@@ -259,3 +261,22 @@ For a source producing 10 energy/tick, a link transfer system might sacrifice ap
 If avoiding a hauler saves more than that in amortised spawn costs, road maintenance and other expenses, links can become the economically preferable option.
 
 The exact comparison also depends on whether the link is already built and whether its transfer capacity and cooldown accommodate the source.
+
+### Replacement timing
+Instead of using a fixed TTL threshold, calculate:
+
+$$T_{\text{replacement}}=T_{\text{spawn}}+T_{\text{travel}}+T_{\text{buffer}}$$
+
+For a seven-part miner requiring 21 ticks to spawn, 15 ticks to reach the source, and a 10-tick safety margin, initiate replacement with approximately 46 ticks remaining.
+
+This could be extended with actual travel-time measurements and spawn-queue delays.
+
+### Overall Colony Wide Objective
+$$\boxed{\text{Efficiency} = \frac{\text{Useful energy delivered or work completed}}{\text{Energy Invested} + \text{maintenance and CPU costs}}}$$
+
+## References
+- [Official Screeps Documentation](https://docs.screeps.com/index.html)
+- [Screepspl.us Wiki - Creep Setup Strategies](https://wiki.screepspl.us/Creep_body_setup_strategies/)
+- [slowmotionghost - Remote Mining Guide](https://github.com/screeps/docs/pull/60/changes)
+- [Screepspl.us Wiki - Combat Guide](https://wiki.screepspl.us/Combat/)
+- [Screepspl.us Wiki - Maturity Matrix](https://wiki.screepspl.us/Maturity_Matrix/)

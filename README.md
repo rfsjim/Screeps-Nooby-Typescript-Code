@@ -17,6 +17,7 @@ Updating the codebase using a known stable baseline.
 - [CHANGELOG](./CHANGELOG.md)
 - [CODE OF CONDUCT](./CODE_OF_CONDUCT.md)
 - [CONTRIBUTING](./CONTRIBUTING.md)
+- [The mathematics of an efficient colony](./docs/README.md)
 
 ## Key Ideas
 - Use this as a way to get comfortable using VS Code and CI/CD
