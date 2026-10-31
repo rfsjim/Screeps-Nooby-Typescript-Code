@@ -3,7 +3,11 @@ const MAXIMUM_OBSERVATIONS = 200;
 const ENERGY_PER_SUCCESSFUL_HARVEST = 10;
 
 module.exports = {
-	// a function to run the logic for this role
+	/**
+	 * Run the role miner logic
+	 * @param {Creep} creep
+	 * @returns {void}
+	 */
 	run: function (creep) {
 		// get source
 		let source = Game.getObjectById(creep.memory.sourceId);
