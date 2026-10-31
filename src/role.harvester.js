@@ -13,6 +13,7 @@ module.exports = {
 		) {
 			// switch state
 			creep.memory.working = false;
+			creep.say('🚜 harvest');
 		}
 		// if creep is harvesting energy but is full
 		else if (
@@ -22,6 +23,7 @@ module.exports = {
 		) {
 			// switch state
 			creep.memory.working = true;
+			creep.say('🪣 fill');
 		}
 
 		// if creep is supposed to transfer energy to a structure
@@ -56,7 +58,9 @@ module.exports = {
 					ERR_NOT_IN_RANGE
 				) {
 					// move towards it
-					creep.moveTo(structure);
+					creep.moveTo(structure, {
+						visualizePathStyle: { stroke: '#ffffff' },
+					});
 				}
 			} else {
 				// run upgrader logic

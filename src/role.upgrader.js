@@ -18,6 +18,7 @@ module.exports = {
 		) {
 			// switch state
 			creep.memory.working = false;
+			creep.say('🚜 harvest');
 		}
 		// if creep is harvesting energy but is full
 		else if (
@@ -27,6 +28,7 @@ module.exports = {
 		) {
 			// switch state
 			creep.memory.working = true;
+			creep.say('⚡ upgrade');
 		}
 
 		// if creep is supposed to transfer energy to the controller
@@ -40,7 +42,9 @@ module.exports = {
 				ERR_NOT_IN_RANGE
 			) {
 				// if not in range, move towards the controller
-				creep.moveTo(creep.room.controller);
+				creep.moveTo(creep.room.controller, {
+					visualizePathStyle: { stroke: '#8B0000' },
+				});
 			}
 
 			// signController if not already signed
@@ -48,7 +52,9 @@ module.exports = {
 				signControllerIfNeeded(creep, creep.room.controller) ===
 				ERR_NOT_IN_RANGE
 			) {
-				creep.moveTo(creep.room.controller);
+				creep.moveTo(creep.room.controller, {
+					visualizePathStyle: { stroke: '#8B00ff' },
+				});
 			}
 		}
 		// if creep is supposed to get energy

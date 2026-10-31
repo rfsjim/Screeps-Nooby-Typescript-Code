@@ -34,6 +34,7 @@ module.exports = {
 		) {
 			// switch state
 			creep.memory.working = false;
+			creep.say('🚜 harvest');
 		} else if (
 			creep.memory.working === false &&
 			creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0
@@ -41,6 +42,7 @@ module.exports = {
 			// if creep is harvesting energy but is full
 			// switch state
 			creep.memory.working = true;
+			creep.say('🏗️ build');
 		}
 
 		// if creep is completing constructionSite
@@ -53,7 +55,9 @@ module.exports = {
 			if (constructionSite !== undefined) {
 				// try to build
 				if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
-					creep.moveTo(constructionSite);
+					creep.moveTo(constructionSite, {
+						visualizePathStyle: { stroke: '#2c0276ff' },
+					});
 				}
 			} else {
 				// no construction sites so upgrade the controller
