@@ -1,6 +1,8 @@
 module.exports = {
-	// a function to run the logic for this role
-	/** @param {Creep} creep */
+	/**
+	 * Run Long Distance Harvester Creep Logic
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		// record trip time analytics to assist with future optimisation of body parts
 		if (
@@ -143,6 +145,10 @@ module.exports = {
 	},
 };
 
+/**
+ * Begin Trip Metrics
+ * @param {Creep} creep
+ */
 function beginTrip(creep) {
 	if (creep.memory.tripSequence === undefined) {
 		creep.memory.tripSequence = 1;
@@ -170,6 +176,10 @@ function beginTrip(creep) {
 	};
 }
 
+/**
+ * Get Creep Body Profile
+ * @param {Creep} creep
+ */
 function getBodyProfile(creep) {
 	const profile = {
 		work: creep.body.filter((part) => part.type === WORK).length,
@@ -184,6 +194,10 @@ function getBodyProfile(creep) {
 	};
 }
 
+/**
+ * Update Delivered Energy Track
+ * @param {Creep} creep
+ */
 function updateDeliveredEnergy(creep) {
 	const trip = creep.memory.tripMetric;
 
@@ -194,6 +208,10 @@ function updateDeliveredEnergy(creep) {
 	trip.deliveredEnergy = trip.carriedEnergy - creep.store[RESOURCE_ENERGY];
 }
 
+/**
+ * Record Completed Trip
+ * @param {Creep} creep
+ */
 function recordCompletedTrip(creep) {
 	const trip = creep.memory.tripMetric;
 

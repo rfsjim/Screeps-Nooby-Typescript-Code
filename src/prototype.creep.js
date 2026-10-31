@@ -22,6 +22,11 @@ Creep.prototype.runRole = function () {
 	role.run(this);
 };
 
+/**
+ * Creeps can obtain energy either from containers or sources
+ * @param {boolean} useContainer
+ * @param {boolean} useSource
+ */
 Creep.prototype.getEnergy = function (useContainer, useSource) {
 	let container = null;
 	// if the Creep should look for containers

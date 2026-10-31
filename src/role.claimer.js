@@ -1,5 +1,8 @@
 module.exports = {
-	// a function to run the logic for this role
+	/**
+	 * Run Claimer Logic
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		// if in target room
 		if (creep.room.name !== creep.memory.target) {
@@ -9,9 +12,13 @@ module.exports = {
 			creep.moveTo(creep.pos.findClosestByRange(exit));
 		} else {
 			// try to claim controller
+			const actions = {
+				claim: () => creep.claimController(creep.room.controller),
+				reserve: () => creep.reserveController(creep.room.controller),
+			};
+
 			if (
-				creep.claimController(creep.room.controller) ===
-				ERR_NOT_IN_RANGE
+				actions[creep.memory.controllerAction]?.() === ERR_NOT_IN_RANGE
 			) {
 				// move towards the controller
 				creep.moveTo(creep.room.controller);

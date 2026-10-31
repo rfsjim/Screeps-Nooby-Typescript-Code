@@ -1,4 +1,9 @@
 class resourceManager {
+	/**
+	 * Resource Manager
+	 * @param {Room} room
+	 * @param {ResourceConstant} energyType
+	 */
 	constructor(room, energyType) {
 		this.room = room;
 		this.energyType = energyType;

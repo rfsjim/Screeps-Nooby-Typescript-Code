@@ -2,7 +2,10 @@
 // Revisit mineral availability, workforce demand, and mineral processing (labs, boosts and commodities).
 
 module.exports = {
-	/** @param {Creep} creep **/
+	/**
+	 * Run Extractor Role
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		if (
 			creep.memory.extracting &&

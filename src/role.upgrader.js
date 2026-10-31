@@ -7,7 +7,7 @@
 
 module.exports = {
 	/**
-	 * Function to run the logic for this role
+	 * Function to run the logic for upgraders
 	 * @param {Creep} creep
 	 */
 	run: function (creep) {

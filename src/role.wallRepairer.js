@@ -1,8 +1,10 @@
 const roleBuilder = require('./role.builder');
 
 module.exports = {
-	// a function to run the logic for this role
-	/** @param {Creep} creep */
+	/**
+	 * Run Logic for Wall Repairer Creep
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		// if creep is trying to repair something but has no energy left
 		if (

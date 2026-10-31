@@ -1,7 +1,10 @@
 const roleUpgrader = require('./role.upgrader');
 
 module.exports = {
-	// a function to run logic for builders
+	/**
+	 * Run Logic for Builders
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		// if creep has a target but not in target room
 		if (

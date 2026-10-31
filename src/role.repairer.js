@@ -3,8 +3,10 @@ const roleBuilder = require('./role.builder');
 // TODO: Check intents behaviour - withdraw() and repair() are different action categories can perform both in one tick
 
 module.exports = {
-	// a function to run the logic for this role
-	/** @param {Creep} creep */
+	/**
+	 * Run Creep Repairer Logic
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		// if creep is trying to repair something but has no energy left
 		if (

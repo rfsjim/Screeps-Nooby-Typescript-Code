@@ -1,7 +1,4 @@
 StructureTerminal.prototype.findTrade = function () {
-	/* for (resource in this.store) {
-            console.log(resource + ", " + this.store.getUsedCapacity(resource));
-        } */
 	if (
 		this.store[RESOURCE_ENERGY] >= 2000 &&
 		this.store[RESOURCE_HYDROGEN] >= 2000

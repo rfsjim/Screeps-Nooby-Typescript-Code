@@ -297,7 +297,11 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	}
 };
 
-// create new function to spawn creeps
+/**
+ * Function to spawn custom sized creeps
+ * @param {number} energy
+ * @param {string} roleName
+ */
 StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
 	// create balance creep as big as possible with the given energy
 	// min parts group is a work move carry
@@ -332,7 +336,14 @@ StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
 	};
 };
 
-// create new function to spawn long distance miners
+/**
+ * spawn long distance miners
+ * @param {number} energy
+ * @param {number} numberOfWorkParts
+ * @param {string} home
+ * @param {string} target
+ * @param {number} sourceIndex
+ */
 StructureSpawn.prototype.createLongDistanceHarvester = function (
 	energy,
 	numberOfWorkParts,
@@ -410,9 +421,17 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 	};
 };
 
-// create function to spawn claimer
+/**
+ *
+ * @param {string} target
+ * @param {'claim'|'reserve'} action
+ */
 StructureSpawn.prototype.createClaimer = function (target, action) {
 	// claimer just needs move and claim part
+	if (action !== 'claim' && action !== 'reserve') {
+		throw new Error(`Invalid claimer action: ${action}`);
+	}
+
 	const creepMemory = {
 		memory: { role: 'claimer', target: target, controllerAction: action },
 	};
@@ -425,7 +444,10 @@ StructureSpawn.prototype.createClaimer = function (target, action) {
 	};
 };
 
-// create function to spawn miner
+/**
+ * spawn miner
+ * @param {string} sourceId
+ */
 StructureSpawn.prototype.createMiner = function (sourceId) {
 	// accept sourceId that requires miner. Miners five work parts will empty a source in the refresh time frame
 	const creepMemory = { memory: { role: 'miner', sourceId: sourceId } };
@@ -438,7 +460,10 @@ StructureSpawn.prototype.createMiner = function (sourceId) {
 	};
 };
 
-// create function to spawn lorry
+/**
+ * spawn lorry
+ * @param {number} energy
+ */
 StructureSpawn.prototype.createLorry = function (energy) {
 	// lorry has twice the carry parts to move parts
 	let numberOfParts = Math.floor(

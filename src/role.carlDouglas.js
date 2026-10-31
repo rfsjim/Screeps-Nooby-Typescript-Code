@@ -1,5 +1,8 @@
 module.exports = {
-	/** @param {Creep} creep **/
+	/**
+	 * Run Carl Douglas Role (Defenders)
+	 * @param {Creep} creep
+	 */
 	run: function (creep) {
 		let target;
 		//find hostile creeps to attack if creep has attack parts

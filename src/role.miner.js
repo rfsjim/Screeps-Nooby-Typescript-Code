@@ -6,7 +6,6 @@ module.exports = {
 	/**
 	 * Run the role miner logic
 	 * @param {Creep} creep
-	 * @returns {void}
 	 */
 	run: function (creep) {
 		// get source
@@ -85,6 +84,12 @@ module.exports = {
 	},
 };
 
+/**
+ * Gets or Begins Mining Operation
+ * @param {Creep} creep
+ * @param {Source} source
+ * @param {StructureContainer} container
+ */
 function getOrBeginObservation(creep, source, container) {
 	const current = creep.memory.minerObservation;
 
@@ -124,6 +129,11 @@ function getOrBeginObservation(creep, source, container) {
 	return creep.memory.minerObservation;
 }
 
+/**
+ * Observer Container Current Energy
+ * @param {StructureContainer} container
+ * @param {*} observation
+ */
 function observeContainerEnergy(container, observation) {
 	const containerEnergy = container.store[RESOURCE_ENERGY] ?? 0;
 
@@ -135,6 +145,11 @@ function observeContainerEnergy(container, observation) {
 	observation.observedTicks++;
 }
 
+/**
+ * Interrupts Current Observation
+ * @param {Creep} creep
+ * @param {'sourceUnavailable' | 'containerUnavailable'} interruptionReason
+ */
 function interruptObservation(creep, interruptionReason) {
 	const observation = creep.memory.minerObservation;
 
@@ -148,6 +163,12 @@ function interruptObservation(creep, interruptionReason) {
 	});
 }
 
+/**
+ * Record Current Observation
+ * @param {Creep} creep
+ * @param {*} observation
+ * @param {*} param2
+ */
 function recordObservation(
 	creep,
 	observation,

@@ -1,5 +1,9 @@
 module.exports = {
-	/** @param {Creep} creep */
+	/**
+	 * Runs Lorry Role Logic
+	 * @param {Creep} creep
+	 * @returns
+	 */
 	run: function (creep) {
 		// --- State toggling ---
 		if (creep.memory.working && creep.store[RESOURCE_ENERGY] === 0) {
