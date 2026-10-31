@@ -45,18 +45,10 @@ module.exports = {
 
 			// signController if not already signed
 			if (
-				!creep.room.controller.sign ||
-				creep.room.controller.sign.username !==
-					creep.room.controller.owner.username
+				signControllerIfNeeded(creep, creep.room.controller) ===
+				ERR_NOT_IN_RANGE
 			) {
-				if (
-					creep.signController(
-						creep.room.controller,
-						'007 was here',
-					) === ERR_NOT_IN_RANGE
-				) {
-					creep.moveTo(creep.room.controller);
-				}
+				creep.moveTo(creep.room.controller);
 			}
 		}
 		// if creep is supposed to get energy
@@ -65,3 +57,35 @@ module.exports = {
 		}
 	},
 };
+
+/**
+ * Signs Controller if Required
+ * @param {Creep} creep
+ * @param {StructureController} controller
+ * @param {string} text
+ * @returns {OK | ERR_BUSY | ERR_INVALID_TARGET | ERR_NOT_IN_RANGE} Signing result
+ */
+function signControllerIfNeeded(creep, controller, text = '007 was here') {
+	const ownerName = controller.owner?.username;
+	const reserverName = controller.reservation?.username;
+
+	// Skip controllers owned by another player
+	if (ownerName && ownerName !== PLAYER_USERNAME) {
+		return ERR_INVALID_TARGET;
+	}
+
+	// Skip controllers reserved by another player
+	if (reserverName && reserverName !== PLAYER_USERNAME) {
+		return ERR_INVALID_TARGET;
+	}
+
+	// Sign if the message differs or another player signed it
+	if (
+		controller.sign?.text !== text ||
+		controller.sign?.username !== PLAYER_USERNAME
+	) {
+		return creep.signController(controller, text);
+	}
+
+	return ERR_INVALID_TARGET;
+}
