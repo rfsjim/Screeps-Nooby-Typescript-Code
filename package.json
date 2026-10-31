@@ -13,13 +13,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/screeps": "^3.4.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
-  },
-  "dependencies": {
-    "@types/screeps": "^3.4.0"
   }
 }
