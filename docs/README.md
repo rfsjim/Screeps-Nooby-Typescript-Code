@@ -215,7 +215,7 @@ Where:
 | CPU                    | How much useful output is achieved per CPU unit?                        | Better colony scalability       |
 
 ### Construction Workforce
-One WORK part creates five construction progress per tick and consumes up to five energy.
+One `WORK` part creates five construction progress per tick and consumes up to five energy.
 
 For a construction project requiring $B$ progress:
 
@@ -234,7 +234,7 @@ where $D$ is incoming structural damage per tick and the extra three represents 
 
 This assumes continuous, unboosted creep repairs with enough energy and ignores the timing of individual decay events.
 
-If attackers inflict 2,000 damage/tick, approximately 21 continuously repairing WORK parts are required to maintain the rampart indefinitely.
+If attackers inflict 2,000 damage/tick, approximately 21 continuously repairing `WORK` parts are required to maintain the rampart indefinitely.
 
 Repairs can be distributed across multiple creeps, and attackers may concentrate on a single location.
 
