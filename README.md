@@ -47,3 +47,11 @@ Includes a statistical data collector for Long Distance Harvester efficiency. Us
 CPU Monitoring is available from `JSON.stringify(Memory.stats)`
 
 Helper scripts for developers to use when running a private server for testing and simulation setup are available at [server-scripts](./server-scripts/README.md)
+
+Useful NPM Tools
+|        Command        |               Purpose               |
+|:---------------------:|:-----------------------------------:|
+| npm i package         | Install as a production dependency  |
+| npm i -D package      | Install as a development dependency |
+| npm i -E package      | Install an exact version            |
+| npm uninstall package | Remove a dependency                 |

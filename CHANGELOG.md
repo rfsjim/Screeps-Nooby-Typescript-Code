@@ -49,3 +49,5 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Tower busy state never resets after the first successful attack.
 - Fix: Latex Math Notation
 - Fix: Latex Math Notation
+- Fix: Logic errors causing init data to be incorrect or incorrectly handled
+- Fix: Init bug fixes and logical areas
