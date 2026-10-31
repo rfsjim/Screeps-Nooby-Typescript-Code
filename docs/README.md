@@ -23,7 +23,7 @@ There are *six* areas of mathematics that is worth focusing on
 | `HEAL`          | 250  | 12 adjacent or 4 ranged healing/tick                               |
 | `CLAIM`         | 600  | Claim, reserve, attack controllers                                 |
 | `TOUGH`         | 10   | 100 HP, boostable resistance                                       |
-
+\
 Normal creeps live for 1,500 ticks, creeps with `CLAIM` parts live for 600 ticks. The maximum body is 50 parts, with spawning requiring 3 ticks per part.
 
 That identifies three different optimisation objective:
@@ -32,5 +32,58 @@ That identifies three different optimisation objective:
 - **Lifetime efficiency:** maximise productive work before the creep expires, accounting for travel and spawning.
 
 For a creep with $W$ work parts, its theoretical lifetime energy harvest is:\
-$$H=2W(1500-T)$$
-where $T$ is the total time spent not harvesting.
+$$H=2W(1500-T)$$\
+where $T$ is the total time spent not harvesting.\
+
+A miner with five `WORK` parts working continuously with a 30 tick travel time could theoretically harvest 14,700 energy. This is ignoring the limits of sources or other variables.
+
+### Movement is a significant hidden cost
+Documentation specifies fatigue generation per non-`MOVE` part:
+| Terrain | Fatigue per loaded non-MOVE part | MOVE requirement for 1 tile/tick |
+|:-------:|:--------------------------------:|:--------------------------------:|
+| Road    | 1                                | 1 MOVE per 2 other parts         |
+| Plain   | 2                                | 1 MOVE per 1 other part          |
+| Swamp   | 10                               | 5 MOVE per 1 other part          |
+\
+- Empty `CARRY` parts do not generate fatigue. Boosted movement changes the calculation.
+- Road infrastructure economically important: a hauler travelling a road network can dedicate more of its 50 parts to carrying resources.
+- A useful design pattern is to calculate the required movement parts from the actual route, rather than using a fixed ratio for every creep.
+
+## Harvesting and logistics
+
+### Harvesting matching source output to WORK capacity
+Standard source capacities and regeneration intervals produce these theoretical rates:
+|     Source type     | Energy / regeneration | Energy / tick | `WORK` to saturate |
+|:-------------------:|:---------------------:|:-------------:|:----------------:|
+| Owned room          | 3,000 / 300 ticks     | 10            | 5                |
+| Neutral, unreserved | 1,500 / 300 ticks     | 5             | 3                |
+| Reserved room       | 3,000 / 300 ticks     | 10            | 5                |
+| Source Keeper room  | 4,000 / 300 ticks     | 13.33         | 7                |
+\
+The last column rounds up to whole `WORK` parts. It assumes continuous harvesting, no contention, and a source with its normal regeneration behaviour.
+
+Useful constants
+- `ENERGY_REGEN_TIME`,
+- `SOURCE_ENERGY_CAPACITY`,
+- `SOURCE_ENERGY_NEUTRAL_CAPACITY` and
+- `SOURCE_ENERGY_KEEPER_CAPACITY`
+
+- A stationary five-`WORK` miner is sufficient to saturate a normal owned-room source. Adding more `WORK` parts provides no additional sustainable output unless you're trying to empty an accumulated source faster or compensate for downtime.
+
+#### Exception - Harvesting for Recovery
+- When a source has regenerated to its full capacity, a larger miner can extract that stored energy faster. For example, ten WORK parts harvest 20 energy/tick, allowing 3,000 stored energy to be extracted in 150 ticks rather than 300.
+- That can be valuable after a workforce collapse, even though it doesn't increase long-run regeneration.
+
+### Hauler Sizing: a throughput problem
+Need to consider calculating required carrying capacity based on source output, route distance and transport arrangements.
+
+The fundamental relationship for `CARRY` parts is:\
+$$\boxed{C_{\text{required}} = \frac{P\,T_{\text{round trip}}}{50}}$$
+$$C=PT/50$$
+
+Where:\
+- $P$ is the energy production rate in energy/tick.
+- $T_{\text{round trip}}$ is the complete loaded and unloaded cycle time.
+- $C_{\text{required}}$ is the number of `CARRY` parts needed across the hauler workforce.
+
+The work could be distributed between a number of lorries as long as the combined `CARRY` parts fits into the equation. For example two smaller lorries or one larger lorry, depending on room energy capacity, spawn utilisation and reliability.
