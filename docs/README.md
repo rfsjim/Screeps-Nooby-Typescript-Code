@@ -78,7 +78,7 @@ A stationary five-`WORK` miner is sufficient to saturate a normal owned-room sou
 Need to consider calculating required carrying capacity based on source output, route distance and transport arrangements.
 
 The fundamental relationship for `CARRY` parts is:\
-$$\boxed{C_{\text{carry required}} = \frac{P\T_{\text{round trip}}}{50}}$$
+$$\boxed{C_{\text{carry required}} = \frac{P \cdot T_{\text{round trip}}}{50}}$$
 
 Where:
 - $P$ is the energy production rate in energy/tick.
@@ -92,7 +92,9 @@ The work could be distributed between a number of lorries as long as the combine
 ### Decay and repair economics
 How much energy must be allocated to maintenance over time?
 The basic repair equation is:
-$$\boxed{E_{\text{repair}} = \frac{hits lost}{100}}$$
+
+$$\boxed{E_{\text{repair}} = \frac{\text{hits lost}}{100}}$$
+
 One unboosted `WORK` part repairs 100 hits/tick at a cost of one energy/tick.
 
 #### Decay rates and maintenance budgets
@@ -123,3 +125,87 @@ But there is a trade-off: an extra `WORK` part costs 100 energy and consumes a b
 A container has 250,000 maximum hits and costs 5,000 energy to construct. Restoring 250,000 hits through repair costs 2,500 energy.
 
 Ignoring creep and logistics costs, repairing an existing container is half the energy cost of constructing a replacement.
+
+## Combat
+- **Boosts** become very useful in combat
+- **Duos** are two creeps working together in attack or defense.
+- **Quads** are four creeps in a 2x2 formation working together in attack or defense.
+- **Squads** are more the four creeps working together in attack or defense.
+
+Always bring a buddy.
+
+Quads may have two dedicated attackers and two dedicated healers all adjacent to each other. Moving together as one collective.
+
+### Healing mathematics
+Suppose four creeps collectively have 40 unboosted `HEAL` parts. Their theoretical total adjacent healing capacity is:
+
+$$\boxed{40 \times 12 = 480 HP/tick}$$
+
+Because each unit is adjacent to every other unit, all four can concentrate healing on one injured creep, provided they have valid healing actions and the relevant parts remain operational.
+
+If an enemy delivers 450 damage/tick to one unit, the formation can theoretically sustain that damage indefinitely, assuming no other losses or complications.
+
+At 600 damage/tick, the formation loses 120 HP/tick net. Eventually body parts are disabled, reducing combat effectiveness.
+
+That is the basic logic behind quad survival calculations.
+
+#### Boosted `TOUGH` changes everything
+Boosted `TOUGH` parts can reduce incoming damage substantially. At the strongest conventional `TOUGH` damage-reduction tier, a part receives 30% of the original damage.
+
+If 600 incoming damage lands entirely on appropriately boosted `TOUGH` parts:
+
+$$\boxed{600 \times 0.3 = 180 HP}$$
+
+The same 480 HP/tick healing pool would comfortably offset that damage.
+
+But once the protected TOUGH parts are destroyed, the remaining damage may reach unprotected parts.
+
+This is why **body-part ordering is mathematically important**, rather than cosmetic. It is suggested to place TOUGH at the front and preserving HEAL or MOVE parts towards the rear.
+
+#### Quad optimisation objectives
+A quad design should calculate:
+|        Variable        |             Why it matters             |
+|:---------------------:|:--------------------------------------:|
+| Damage per tick       | Can the squad defeat its target?       |
+| Concentrated healing  | Can it survive focused fire?           |
+| Distributed healing   | Can it survive spread damage?          |
+| TOUGH protection      | How much effective damage is absorbed? |
+| Movement              | Can all four creeps move together?     |
+| Body ordering         | Which abilities fail first?            |
+| Spawn and boost costs | Is the attack economically worthwhile? |
+| Path accessibility    | Can a 2×2 formation reach its target?  |
+
+- Maximising healing is not the same as maximising survivability. A creep can have enormous healing capacity but insufficient protected HP to survive a concentrated burst.
+- Simulate damage against individual body parts in their actual order, including boosts and healing decisions.
+
+### Tower damage and distance
+Towers are another major variable.
+
+Their unboosted damage decreases linearly from 600 HP/tick at range five or closer to 150 HP/tick at range 20 or farther.
+
+At range 20, six towers collectively deal 900 raw damage/tick. At range five, the same six towers deal 3,600.
+
+That is an enormous difference in the healing capacity required for an attacking quad.
+
+A useful offensive calculation is:
+
+$$\boxed{D_{\text{net}} = D_{\text{incoming after mitigation}} - H_{\text{available}}}$$
+
+Where:
+- $D_{\text{net}}$ is the damage sustained after the mitigation and healing is considered
+- $D_{\text{incoming after mitigation}}$ is `TOUGH` parts boosted or not
+- $H_{\text{available}}$ is available `HEAL`
+
+## Useful Optimisations
+|         System         |                          Mathematical question                          |        Practical benefit        |
+|:----------------------:|:-----------------------------------------------------------------------:|:-------------------------------:|
+| Controller upgrading   | How many WORK parts can the energy supply continuously?                 | Avoid idle upgraders            |
+| Builders               | How long will a construction project take?                              | Schedule construction workforce |
+| Spawning               | What fraction of spawn time is occupied?                                | Avoid spawn bottlenecks         |
+| Links                  | Does eliminating hauling justify 3% transfer loss?                      | Efficient energy distribution   |
+| Roads                  | Does reduced movement cost repay construction and maintenance?          | Lower transport cost            |
+| Towers                 | Is repairing with a tower worth the extra energy?                       | CPU versus energy trade-off     |
+| Ramparts               | How much repair capacity is needed against incoming DPS?                | Dynamic defensive targets       |
+| Remote mining          | Does delivered energy exceed harvesting, hauling and reservation costs? | Identify profitable rooms       |
+| Controller reservation | How many CLAIM parts and trips maintain the reservation?                | Avoid overinvestment            |
+| CPU                    | How much useful output is achieved per CPU unit?                        | Better colony scalability       |
