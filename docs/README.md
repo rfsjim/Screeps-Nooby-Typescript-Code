@@ -31,8 +31,10 @@ That identifies three different optimisation objective:
 - **Throughput:** maximise useful work completed per tick.
 - **Lifetime efficiency:** maximise productive work before the creep expires, accounting for travel and spawning.
 
-For a creep with $W$ work parts, its theoretical lifetime energy harvest is:\
-$$\boxed{H=2W(1500-T)}$$\
+For a creep with $W$ work parts, its theoretical lifetime energy harvest is:
+
+$$\boxed{H=2W(1500-T)}$$
+
 Where $T$ is the total time spent not harvesting.
 
 A miner with five `WORK` parts working continuously with a 30 tick travel time could theoretically harvest 14,700 energy. This is ignoring the limits of sources or other variables.
@@ -77,7 +79,8 @@ A stationary five-`WORK` miner is sufficient to saturate a normal owned-room sou
 ### Hauler Sizing: a throughput problem
 Need to consider calculating required carrying capacity based on source output, route distance and transport arrangements.
 
-The fundamental relationship for `CARRY` parts is:\
+The fundamental relationship for `CARRY` parts is:
+
 $$\boxed{C_{\text{carry required}} = \frac{P \cdot T_{\text{round trip}}}{50}}$$
 
 Where:
@@ -91,6 +94,7 @@ The work could be distributed between a number of lorries as long as the combine
 
 ### Decay and repair economics
 How much energy must be allocated to maintenance over time?
+
 The basic repair equation is:
 
 $$\boxed{E_{\text{repair}} = \frac{\text{hits lost}}{100}}$$
@@ -209,3 +213,49 @@ Where:
 | Remote mining          | Does delivered energy exceed harvesting, hauling and reservation costs? | Identify profitable rooms       |
 | Controller reservation | How many CLAIM parts and trips maintain the reservation?                | Avoid overinvestment            |
 | CPU                    | How much useful output is achieved per CPU unit?                        | Better colony scalability       |
+
+### Construction Workforce
+One WORK part creates five construction progress per tick and consumes up to five energy.
+
+For a construction project requiring $B$ progress:
+
+$$T_{\text{build}}=\frac{B}{5W}$$
+
+This is an ideal estimate assuming continuous energy supply and no travel.
+
+Rather than spawning builders just because construction sites exist, estimate the required completion time and size the workforce accordingly.
+
+### Rampart defence
+For a rampart under sustained attack:
+
+$$W_{\text{required}}=\left\lceil\frac{D+3}{100}\right\rceil$$
+
+where $D$ is incoming structural damage per tick and the extra three represents natural rampart decay averaged over time.
+
+This assumes continuous, unboosted creep repairs with enough energy and ignores the timing of individual decay events.
+
+If attackers inflict 2,000 damage/tick, approximately 21 continuously repairing WORK parts are required to maintain the rampart indefinitely.
+
+Repairs can be distributed across multiple creeps, and attackers may concentrate on a single location.
+
+### Spawn utilisation
+For a creep with $N$ body parts:
+
+$$T_{\text{spawn}}=3N$$
+
+If a 30-part creep must be replaced every 1,500 ticks, that workforce position consumes 90 spawn ticks per lifecycle.
+
+$$U_{\text{spawn}}=\frac{90}{1500}=6\%$$
+
+Ten equivalent workforce positions consume 60% of a single spawn's theoretical capacity, assuming perfectly staggered replacement.
+
+This provides a way to forecast whether your spawn can support the workforce you're planning.
+
+### Links versus haulers
+Links lose 3% of transferred energy.
+
+For a source producing 10 energy/tick, a link transfer system might sacrifice approximately 0.3 energy/tick, before accounting for transfer timing and rounding.
+
+If avoiding a hauler saves more than that in amortised spawn costs, road maintenance and other expenses, links can become the economically preferable option.
+
+The exact comparison also depends on whether the link is already built and whether its transfer capacity and cooldown accommodate the source.
