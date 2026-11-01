@@ -96,6 +96,9 @@ function createMockRoom({
 	sources = [],
 	structures = [],
 	constructionSites = [],
+	droppedResources = [],
+	tombstones = [],
+	ruins = [],
 	controller = {
 		my: true,
 		level: 1,
@@ -135,6 +138,15 @@ function createMockRoom({
 			}
 			if (type === FIND_CONSTRUCTION_SITES) {
 				results = constructionSites;
+			}
+			if (type === FIND_DROPPED_RESOURCES) {
+				results = droppedResources;
+			}
+			if (type === FIND_TOMBSTONES) {
+				results = tombstones;
+			}
+			if (type === FIND_RUINS) {
+				results = ruins;
 			}
 			return options.filter ? results.filter(options.filter) : results;
 		},
