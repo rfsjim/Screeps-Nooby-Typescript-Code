@@ -274,6 +274,9 @@ This could be extended with actual travel-time measurements and spawn-queue dela
 ### Overall Colony Wide Objective
 $$\boxed{\text{Efficiency} = \frac{\text{Useful energy delivered or work completed}}{\text{Energy Invested} + \text{maintenance and CPU costs}}}$$
 
+### Terminal Resource Market Metric
+$$\text{Net value} = (\text{quantity}\times\text{price})-(\text{transaction energy}\times\text{energy value})$$
+
 ## References
 - [Official Screeps Documentation](https://docs.screeps.com/index.html)
 - [Screepspl.us Wiki - Creep Setup Strategies](https://wiki.screepspl.us/Creep_body_setup_strategies/)
