@@ -1,63 +1,60 @@
-class resourceManager {
+class ResourceManager {
 	/**
 	 * Resource Manager
-	 * @param {Room} room
-	 * @param {ResourceConstant} energyType
+	 * @param {Room} room - The room managing resources for.
 	 */
-	constructor(room, energyType) {
+	constructor(room) {
 		this.room = room;
-		this.energyType = energyType;
-		this.droppedResources = Game.rooms[this.room].find(
-			FIND_DROPPED_RESOURCES,
-		);
-		this.tombstoneWithResources = Game.rooms[this.room].find(
-			FIND_TOMBSTONES,
-			{
-				filter: (s) => s.store.getUsedCapacity() > 0,
-			},
-		);
-		this.resourceContainers = Game.rooms[this.room].find(FIND_STRUCTURES, {
-			filter: (s) =>
-				(s.structureType === STRUCTURE_CONTAINER ||
-					s.structureType === STRUCTURE_STORAGE) &&
-				s.store.getUsedCapacity(this.energyType) > 0,
-		});
-		this.foundResources = new Map();
-		for (const resource of this.resourceContainers) {
-			this.foundResources.set(
-				resource.id,
-				resource.store[this.energyType],
-			);
-		}
-		for (const droppedResource of this.droppedResources) {
-			this.foundResources.set(droppedResource.id, droppedResource.amount);
-		}
 	}
 
-	allocateResources() {
-		// creep, amount
-		// get largest pile of droppedResources
-		const mostResources = _.sortBy(this.droppedResources, 'amount', 'desc');
-		const target = mostResources[0];
-		if (target) {
-			console.log('Dropped Resource: ' + target);
-		}
+	/**
+	 * Find dropped resources of a particular type.
+	 * @param {ResourceConstant} resourceType - They type of resource to find
+	 * @returns {Resource[]} - An array of dropped resources
+	 */
+	getDroppedResources(resourceType) {
+		return this.room.find(FIND_DROPPED_RESOURCES, {
+			filter: (resource) => resource.resourceType === resourceType,
+		});
+	}
 
-		if (target === undefined || target === null) {
-			// no droppedResources get resources from a structure
-			if (this.resourceContainers) {
-				const biggestContainers = _.sortBy(
-					this.resourceContainers,
-					'store[this.energyType]',
-					'desc',
-				);
-				const target = biggestContainers[0];
-				if (target) {
-					console.log('Container: ' + target);
-				}
-			}
-		}
+	/**
+	 * Find structures containing a specified resource.
+	 * Searches containers, storage and terminals.
+	 * @param {ResourceConstant} resourceType
+	 * @returns {(StructureContainer | StructureStorage | StructureTerminal)[]}
+	 */
+	getStructuresWithResources(resourceType) {
+		return this.room.find(FIND_STRUCTURES, {
+			filter: (structure) =>
+				(structure.structureType === STRUCTURE_CONTAINER ||
+					structure.structureType === STRUCTURE_STORAGE ||
+					structure.structureType === STRUCTURE_TERMINAL) &&
+				structure.store[resourceType] > 0,
+		});
+	}
+
+	/**
+	 * Find tombstones containing a specified resource.
+	 * @param {ResourceConstant} resourceType
+	 * @returns {Tombstone[]}
+	 */
+	getTombstonesWithResources(resourceType) {
+		return this.room.find(FIND_TOMBSTONES, {
+			filter: (tombstone) => tombstone.store[resourceType] > 0,
+		});
+	}
+
+	/**
+	 * Find ruins containing a specified resource.
+	 * @param {ResourceConstant} resourceType
+	 * @returns {Ruin[]}
+	 */
+	getRuinsWithResources(resourceType) {
+		return this.room.find(FIND_RUINS, {
+			filter: (ruin) => ruin.store[resourceType] > 0,
+		});
 	}
 }
 
-module.exports = new resourceManager();
+module.exports = ResourceManager;
