@@ -72,6 +72,9 @@ module.exports.loop = function () {
 
 	if (!Memory.stats) {
 		Memory.stats = {};
+		Memory.stats.getUsed = Game.cpu.getUsed();
+		Memory.stats.limit = Game.cpu.limit;
+		Memory.stats.bucket = Game.cpu.bucket;
 	}
 
 	Memory.stats.cpu = {
