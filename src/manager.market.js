@@ -3,7 +3,9 @@
  * @property {boolean} enabled
  * @property {number} reserve
  * @property {number} minimumPrice
+ * @property {number} [maximumPrice]
  * @property {number} maximumTradeSize
+ * @property {number} energyValue
  */
 
 /**
@@ -14,6 +16,7 @@
  * @property {number} price
  * @property {number} grossCredits
  * @property {number} transactionEnergy
+ * @property {number} netValue a signed value: positive for selling, negative for buying
  */
 
 /**
@@ -27,6 +30,7 @@ const tradePolicy = {
 		reserve: 2000,
 		minimumPrice: 0.7,
 		maximumTradeSize: 200,
+		energyValue: 0.1,
 	},
 };
 
@@ -64,6 +68,11 @@ class MarketManager {
 			console.log(`No surplus available for ${resourceType}`);
 			return null;
 		}
+		const terminalEnergy = this.terminal.store[RESOURCE_ENERGY] ?? 0;
+		if (terminalEnergy === 0) {
+			console.log(`No energy available for ${resourceType}`);
+			return null;
+		}
 		const orders = Game.market.getAllOrders(
 			(order) =>
 				order.resourceType === resourceType &&
@@ -77,63 +86,172 @@ class MarketManager {
 			return null;
 		}
 
-		orders.sort(function (a, b) {
-			return b.price - a.price;
+		let bestTrade = null;
+		let bestNetValue = -Infinity;
+
+		orders.forEach((order) => {
+			const amount = Math.min(
+				order.amount,
+				resourcePolicy.maximumTradeSize,
+				availableSurplus,
+			);
+
+			if (amount <= 0) {
+				return;
+			}
+
+			const transactionEnergyCost = Game.market.calcTransactionCost(
+				amount,
+				this.terminal.room.name,
+				order.roomName,
+			);
+
+			if (transactionEnergyCost > terminalEnergy) {
+				return;
+			}
+
+			if (
+				order.resourceType === RESOURCE_ENERGY &&
+				amount + transactionEnergyCost > terminalEnergy
+			) {
+				return;
+			}
+
+			const grossCredits = amount * order.price;
+			const netValue =
+				grossCredits -
+				transactionEnergyCost * resourcePolicy.energyValue;
+
+			if (netValue <= 0) {
+				return;
+			}
+
+			if (
+				netValue > bestNetValue ||
+				(netValue === bestNetValue &&
+					bestTrade !== null &&
+					transactionEnergyCost < bestTrade.transactionEnergy)
+			) {
+				bestNetValue = netValue;
+				/** @type {ProposedTrade} */
+				bestTrade = {
+					orderId: order.id,
+					resourceType: order.resourceType,
+					amount,
+					price: order.price,
+					grossCredits,
+					transactionEnergy: transactionEnergyCost,
+					netValue,
+				};
+			}
 		});
 
-		const order = orders[0];
-		const orderPrice = order.price;
-		const orderAmount = Math.min(
-			order.amount,
-			resourcePolicy.maximumTradeSize,
-			availableSurplus,
-		);
-		const grossOrderCredits = orderAmount * orderPrice;
-		const orderTransactionEnergy = Game.market.calcTransactionCost(
-			orderAmount,
-			this.terminal.room.name,
-			order.roomName,
+		if (!bestTrade) {
+			console.log(`No viable trade found for ${resourceType}`);
+			return null;
+		}
+
+		return bestTrade;
+	}
+
+	/**
+	 * Finds a viable sell order for purchasing resources.
+	 * Does not execute the trade, only returns the order details.
+	 * @param {ResourceConstant} resourceType
+	 * @param {TradePolicy} policy
+	 * @returns {ProposedTrade | null} - Returns the order details if a viable trade is found, otherwise null.
+	 */
+	findBuyTrade(resourceType, policy = tradePolicy) {
+		if (!policy[resourceType]) {
+			console.log(`No Trade policy found for ${resourceType}`);
+			return null;
+		}
+		const resourcePolicy = policy[resourceType];
+		if (!resourcePolicy.enabled) {
+			console.log(`Trade policy for ${resourceType} is not enabled`);
+			return null;
+		}
+		const terminalEnergy = this.terminal.store[RESOURCE_ENERGY] ?? 0;
+		if (terminalEnergy === 0) {
+			console.log(`No energy available for ${resourceType}`);
+			return null;
+		}
+		const orders = Game.market.getAllOrders(
+			(order) =>
+				order.resourceType === resourceType &&
+				order.type === ORDER_SELL &&
+				order.amount > 0 &&
+				(resourcePolicy.maximumPrice === undefined ||
+					order.price <= resourcePolicy.maximumPrice),
 		);
 
-		return {
-			orderId: order.id,
-			resourceType: order.resourceType,
-			amount: orderAmount,
-			price: orderPrice,
-			grossCredits: grossOrderCredits,
-			transactionEnergy: orderTransactionEnergy,
-		};
+		if (orders.length === 0) {
+			console.log(`No ORDER_SELL orders found for ${resourceType}`);
+			return null;
+		}
+
+		let bestTrade = null;
+		let lowestAcquisitionCost = Infinity;
+
+		orders.forEach((order) => {
+			const amount = Math.min(
+				order.amount,
+				resourcePolicy.maximumTradeSize,
+				this.terminal.store.getFreeCapacity(),
+				Math.floor(Game.market.credits / order.price),
+			);
+
+			if (amount <= 0) {
+				return;
+			}
+
+			const transactionEnergyCost = Game.market.calcTransactionCost(
+				amount,
+				this.terminal.room.name,
+				order.roomName,
+			);
+
+			if (transactionEnergyCost > terminalEnergy) {
+				return;
+			}
+
+			const grossCredits = amount * order.price;
+			if (grossCredits > Game.market.credits) {
+				return;
+			}
+
+			const acquisitionCost =
+				grossCredits +
+				transactionEnergyCost * resourcePolicy.energyValue;
+			const unitAcquisitionCost = acquisitionCost / amount;
+
+			if (
+				unitAcquisitionCost < lowestAcquisitionCost ||
+				(unitAcquisitionCost === lowestAcquisitionCost &&
+					bestTrade !== null &&
+					transactionEnergyCost < bestTrade.transactionEnergy)
+			) {
+				lowestAcquisitionCost = unitAcquisitionCost;
+				/** @type {ProposedTrade} */
+				bestTrade = {
+					orderId: order.id,
+					resourceType: order.resourceType,
+					amount,
+					price: order.price,
+					grossCredits,
+					transactionEnergy: transactionEnergyCost,
+					netValue: -acquisitionCost,
+				};
+			}
+		});
+
+		if (!bestTrade) {
+			console.log(`No viable trade found for ${resourceType}`);
+			return null;
+		}
+
+		return bestTrade;
 	}
 }
 
 module.exports = MarketManager;
-
-/**
- * TODO:
- * - Implement findBuyTrade method to find viable sell orders for buying resources.
- * Your code sorts orders by descending price:
-orders.sort((a, b) => b.price - a.price);
-
-Then evaluates only orders[0].
-
-Suppose two orders are available:
-	Order A	Order B
-Unit price	0.90	0.85
-Trade amount	200	200
-Gross credits	180	170
-Transaction energy	800	100
-
-Your code selects Order A.
-
-But Order B costs 700 less energy for only 10 fewer credits.
-
-If energy is valued at 0.1 credits per unit, Order A's net value is 100 credits, while Order B's is 160 credits.
-
-There's also a correctness consequence: if Order A's transaction energy is unaffordable, your function should ideally examine Order B rather than immediately abandoning the search.
-
-I wouldn't necessarily introduce dynamic energy pricing yet. But I'd make sure you're aware that highest unit price and best trade aren't necessarily the same thing.
-
-Later test for
-Then add the two important economic cases: an unaffordable highest-priced order and a lower-priced order with better net value.
- *
- */
