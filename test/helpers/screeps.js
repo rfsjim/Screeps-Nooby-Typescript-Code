@@ -44,6 +44,7 @@ function installScreepsGlobals() {
 		STRUCTURE_EXTRACTOR: 'extractor',
 		STRUCTURE_TERMINAL: 'terminal',
 		ORDER_BUY: 'buy',
+		ORDER_SELL: 'sell',
 		WORK: 'work',
 		CARRY: 'carry',
 		MOVE: 'move',
