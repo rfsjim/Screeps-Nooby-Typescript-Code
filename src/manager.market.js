@@ -50,7 +50,7 @@ class MarketManager {
 	 * Does not execute the trade, only returns the order details.
 	 * @param {ResourceConstant} resourceType
 	 * @param {TradePolicy} policy
-	 * @returns {ProposedTrade | null} - Returns the order details if a viable trade is found, otherwise null.
+	 * @returns {ProposedTrade | null} Returns the order details if a viable trade is found, otherwise null.
 	 */
 	findSellTrade(resourceType, policy = tradePolicy) {
 		if (!policy[resourceType]) {
@@ -159,7 +159,7 @@ class MarketManager {
 	 * Does not execute the trade, only returns the order details.
 	 * @param {ResourceConstant} resourceType
 	 * @param {TradePolicy} policy
-	 * @returns {ProposedTrade | null} - Returns the order details if a viable trade is found, otherwise null.
+	 * @returns {ProposedTrade | null} Returns the order details if a viable trade is found, otherwise null.
 	 */
 	findBuyTrade(resourceType, policy = tradePolicy) {
 		if (!policy[resourceType]) {
