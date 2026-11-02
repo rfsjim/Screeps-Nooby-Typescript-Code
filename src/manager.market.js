@@ -32,6 +32,13 @@ const tradePolicy = {
 		maximumTradeSize: 200,
 		energyValue: 0.1,
 	},
+	[RESOURCE_ZYNTHIUM]: {
+		enabled: true,
+		reserve: 2000,
+		minimumPrice: 0.7,
+		maximumTradeSize: 200,
+		energyValue: 0.1,
+	},
 };
 
 /**
