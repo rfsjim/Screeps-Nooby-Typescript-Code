@@ -275,7 +275,16 @@ This could be extended with actual travel-time measurements and spawn-queue dela
 $$\boxed{\text{Efficiency} = \frac{\text{Useful energy delivered or work completed}}{\text{Energy Invested} + \text{maintenance and CPU costs}}}$$
 
 ### Terminal Resource Market Metric
-$$\text{Net value} = (\text{quantity}\times\text{price})-(\text{transaction energy}\times\text{energy value})$$
+$$\boxed{\text{Total Net value} = (\text{quantity}\times\text{price})-(\text{transaction energy}\times\text{energy value})}$$
+
+$$\boxed{\text{Net value per unit} = \text{price}-\left(\frac{\text{transaction energy}}{\text{quantity}}\times\text{energy value}\right)}$$
+
+- Objective options are:
+  - Highest total net value (generally favors orders that can accept the full trade size, the terminal cooldown means you want to obtain the best result from one transaction), or
+  - Highest net value per resource unit
+
+When selling energy itself, affordability is special: the terminal needs enough energy for both the sold amount and the transaction cost.
+For tie-breaking over equal net value, prefer a lower transaction energy, then a higher unit price.
 
 ## References
 - [Official Screeps Documentation](https://docs.screeps.com/index.html)
