@@ -25,6 +25,13 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Feat module es testing
 - Feat: Add testing for ES Modules with mjs
 - Feat: Telemetry for can mining operations
+- Feat: Add Creep Messages and Path Displays
+- Feat: Resource Manager Allows Searching for Resources in Containers and Dropped within a room
+- Feat: Market Manager Finds Available BUY TRADES to sell to
+- Feat: Buy and Sell Order Discovery
+- Feat: Add New Market Functions to Terminal
+- Feat: Added New Resource Policy for Z
+- Feat: Variables for additional used RESOURCES for mock to pass
 ### Fixed
 
 - Fix: Fixed premature access to Game.spawns['Spawn1'].room
@@ -51,3 +58,4 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Latex Math Notation
 - Fix: Logic errors causing init data to be incorrect or incorrectly handled
 - Fix: Init bug fixes and logical areas
+- Fix: Fix Error where CPU statistics initialization throws on a clean memory state

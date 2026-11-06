@@ -1,4 +1,5 @@
 # Screeps Colony Baseline
+👾⚡🌐
 An adventure into APIs and scripting using *Screeps: World* an open source MMO RTS sandbox game
 
 	Creating an automated script that will  make an army of creeps  who will take over the screeps world
