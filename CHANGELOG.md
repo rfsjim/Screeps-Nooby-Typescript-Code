@@ -32,6 +32,9 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Feat: Add New Market Functions to Terminal
 - Feat: Added New Resource Policy for Z
 - Feat: Variables for additional used RESOURCES for mock to pass
+- Feat: Basic scafolding for a tower manager, no code fleshing out ideas
+- Feat: Tower Manager to Co-Ordinate Attack Heal and Repair
+- Feat: Expand Tower Logic to cover edge cases - add documentation and tests around tower logic
 ### Fixed
 
 - Fix: Fixed premature access to Game.spawns['Spawn1'].room
@@ -59,3 +62,4 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Logic errors causing init data to be incorrect or incorrectly handled
 - Fix: Init bug fixes and logical areas
 - Fix: Fix Error where CPU statistics initialization throws on a clean memory state
+- Fix: Error in taget logic accepting null targets
