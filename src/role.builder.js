@@ -7,14 +7,23 @@ module.exports = {
 	 */
 	run: function (creep) {
 		// if creep has a target but not in target room
+		creep.memory.working ??= false;
 		if (
 			creep.memory.target !== undefined &&
 			creep.room.name !== creep.memory.target
 		) {
 			// find exit to room
 			const exit = creep.room.findExitTo(creep.memory.target);
+			if (exit < 0) {
+				return;
+			}
+
+			const exitPosition = creep.pos.findClosestByRange(exit);
+
 			// move to exit
-			creep.moveTo(creep.pos.findClosestByRange(exit));
+			if (exitPosition) {
+				creep.moveTo(creep.pos.findClosestByRange(exit));
+			}
 			// don't do anything else this turn
 			return;
 		}
@@ -22,9 +31,10 @@ module.exports = {
 		if (
 			creep.memory.target !== undefined &&
 			creep.room.name === creep.memory.target &&
-			creep.room.controller.ticksToDowngrade < 999
+			creep.room.controller?.ticksToDowngrade < 999
 		) {
 			roleUpgrader.run(creep);
+			return;
 		}
 
 		// if creep is trying to complete a constructionSite but has no energy left
@@ -49,10 +59,10 @@ module.exports = {
 		if (creep.memory.working === true) {
 			// find closest constructionSite
 			const constructionSite = creep.pos.findClosestByPath(
-				FIND_CONSTRUCTION_SITES,
+				FIND_MY_CONSTRUCTION_SITES,
 			);
 			// if one is found
-			if (constructionSite !== undefined) {
+			if (constructionSite) {
 				// try to build
 				if (creep.build(constructionSite) === ERR_NOT_IN_RANGE) {
 					creep.moveTo(constructionSite, {
@@ -62,6 +72,7 @@ module.exports = {
 			} else {
 				// no construction sites so upgrade the controller
 				roleUpgrader.run(creep);
+				return;
 			}
 		}
 		// creep should get energy
