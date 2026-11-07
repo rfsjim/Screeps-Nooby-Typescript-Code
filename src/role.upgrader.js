@@ -74,21 +74,22 @@ module.exports = {
 function signControllerIfNeeded(creep, controller, text = '007 was here') {
 	const ownerName = controller.owner?.username;
 	const reserverName = controller.reservation?.username;
+	const playerUsername = controller.owner.username;
 
 	// Skip controllers owned by another player
-	if (ownerName && ownerName !== PLAYER_USERNAME) {
+	if (ownerName && ownerName !== playerUsername) {
 		return ERR_INVALID_TARGET;
 	}
 
 	// Skip controllers reserved by another player
-	if (reserverName && reserverName !== PLAYER_USERNAME) {
+	if (reserverName && reserverName !== playerUsername) {
 		return ERR_INVALID_TARGET;
 	}
 
 	// Sign if the message differs or another player signed it
 	if (
 		controller.sign?.text !== text ||
-		controller.sign?.username !== PLAYER_USERNAME
+		controller.sign?.username !== playerUsername
 	) {
 		return creep.signController(controller, text);
 	}
