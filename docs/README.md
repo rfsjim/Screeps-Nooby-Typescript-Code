@@ -200,6 +200,8 @@ Where:
 - $D_{\text{incoming after mitigation}}$ is `TOUGH` parts boosted or not
 - $H_{\text{available}}$ is available `HEAL`
 
+$$\text{Survival margin} = \text{Current hits} - \text{Estimated incoming damage}$$
+
 ## Useful Optimisations
 Screeps optimisation is best approached as a series of constrained engineering problems.
 
