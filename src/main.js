@@ -1,6 +1,5 @@
 //import modules
 require('./prototype.creep'); // common code for all creeps
-require('./prototype.tower'); // common code for all towers
 require('./prototype.spawn'); // common code for all spawns
 require('./prototype.terminal'); // common code for all terminals
 require('./version'); // check script version
