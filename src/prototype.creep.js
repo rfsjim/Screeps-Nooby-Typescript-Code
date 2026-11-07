@@ -12,6 +12,10 @@ const roles = {
 	carlDouglas: require('./role.carlDouglas'),
 };
 
+/**
+ * For a creep with a given role, run the role code.
+ * @returns {void}
+ */
 Creep.prototype.runRole = function () {
 	const role = roles[this.memory.role];
 
@@ -26,6 +30,7 @@ Creep.prototype.runRole = function () {
  * Creeps can obtain energy either from containers or sources
  * @param {boolean} useContainer
  * @param {boolean} useSource
+ * @returns {void}
  */
 Creep.prototype.getEnergy = function (useContainer, useSource) {
 	let container = null;
@@ -68,8 +73,17 @@ Creep.prototype.getEnergy = function (useContainer, useSource) {
 	}
 };
 
+/**
+ * Pick up any resource dropped in the room
+ * @returns {void}
+ */
 Creep.prototype.pickUpResource = function () {
-	target = this.pos.findClosestByPath(FIND_DROPPED_RESOURCES);
+	const target = this.pos.findClosestByPath(FIND_DROPPED_RESOURCES);
+
+	if (target === null) {
+		return;
+	}
+
 	if (this.pickup(target) === ERR_NOT_IN_RANGE) {
 		this.moveTo(target);
 	}
