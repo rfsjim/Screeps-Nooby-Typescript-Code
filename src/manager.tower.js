@@ -1,4 +1,51 @@
-/** Coordinates every tower in a room using its range-adjusted power. */
+/**
+ * Tower Manager
+ * Coordinates every tower in a room using its range-adjusted power.
+ * Supersedes prototype.tower
+ * aaf29c531e718d471b6ab5ee80c0021fca8a0074 on development/colony-v2
+ *
+ * Tower Priorities
+ * Priority	Situation	Tower response
+ * 1	Defender or healer at imminent risk of death	Heal the critical creep
+ * 2	Hostile creep present	Attack
+ * 3	Injured defender or healer, no hostile threat	Heal
+ * 4	No combat needs, sufficient energy	Repair eligible structures
+ * —	Injured worker	Ignore; spawn/recovery logic handles replacement
+ *
+ * Friendly triage: Which friendly combat-capable creep is at greatest risk, and can our healing change its survival outcome?
+ * Hostile assessment: Which hostile is dangerous, and can tower damage overcome or meaningfully pressure its healing and damage reduction?
+ * Action selection: Is healing, attacking, or conserving energy the most valuable action this tick?
+ *
+ * Triage considers three ratios
+ * Measurement	What it tells us
+ * Health ratio	How damaged is the creep?
+ * Health trend	Is it losing, recovering, or maintaining HP?
+ * Survival outlook	Can our tower meaningfully change the outcome?
+ *
+ * Don't heal the creep with the least health.
+ * Heal the creep for which intervention produces the greatest useful improvement in the
+ * colony's defensive position.
+ *
+ * When several towers are involved, their combined healing could save a creep that
+ * none could save individually.
+ * So the unsalvageable decision must account for available tower support,
+ * not just one tower in isolation.
+ **/
+
+/**
+ * @typedef {Object} Contribution
+ * @property {StructureTower} tower
+ * @property {number} power
+ */
+/**
+ * @typedef {Object} Plan
+ * @property {Creep} creep
+ * @property {Contribution[]} contributions
+ * @property {number} projectedDamage
+ * @property {number} required
+ * @property {number} priority
+ */
+
 const COMBAT_PARTS = [ATTACK, RANGED_ATTACK, HEAL];
 const REPAIR_ENERGY_RATIO = 0.5;
 const REPAIR_HITS_RATIO = 0.6;
@@ -22,30 +69,18 @@ function run(room) {
 	const defenders = friendlies.filter(isCombatCapable);
 	const available = new Set(towers);
 
-	// Reserve the minimum useful group of towers for each endangered defender.
+	// Allocate towers across all endangered defenders so a versatile tower is
+	// not greedily consumed when a constrained defender needs it more.
+	// doesn't recalculate the rescue assignments using the remaining available towers.
+	// It proceeds with the existing allocations and eventually attacks with unused towers.
 	const plans = defenders
 		.map((creep) => makeRescuePlan(creep, towers))
 		.filter((plan) => plan !== null)
 		.sort((a, b) => b.priority - a.priority);
-	for (const plan of plans) {
-		const usable = plan.contributions.filter(({ tower }) =>
-			available.has(tower),
-		);
-		const required = Math.max(
-			1,
-			plan.projectedDamage - plan.creep.hits + 1,
-		);
-		if (sumPower(usable) < required) {
-			continue;
-		}
-		let healing = 0;
-		for (const contribution of usable) {
-			if (healing >= required) {
-				break;
-			}
-			if (contribution.tower.heal(plan.creep) === OK) {
+	for (const allocation of allocateRescues(plans)) {
+		for (const contribution of allocation.contributions) {
+			if (contribution.tower.heal(allocation.plan.creep) === OK) {
 				available.delete(contribution.tower);
-				healing += contribution.power;
 			}
 		}
 	}
@@ -86,6 +121,8 @@ function run(room) {
 
 /**
  * Create Plan to Rescue Creeps
+ * Based around Emergency rescue while hostiles are present:
+ * Where Creep Expected to die next tick without intervention.
  * @param {Creep} creep
  * @param {StructureTower[]} towers
  */
@@ -104,19 +141,114 @@ function makeRescuePlan(creep, towers) {
 			power: getTowerPower(tower, creep, TOWER_POWER_HEAL),
 		}))
 		.sort((a, b) => b.power - a.power);
-	if (creep.hits + sumPower(contributions) <= projectedDamage) {
+	const required = Math.max(1, projectedDamage - creep.hits + 1);
+	const missingHits = creep.hitsMax - creep.hits;
+	if (required > missingHits || sumPower(contributions) < required) {
 		return null;
 	}
 	return {
 		creep,
 		contributions,
 		projectedDamage,
+		required,
 		priority: friendlyPriority(creep) + projectedDamage / creep.hitsMax,
 	};
 }
 
 /**
+ * @typedef {Object} BestPlan
+ * @property {Array} allocations
+ * @property {number} saved
+ * @property {number} priority
+ * @property {number} towers
+ */
+/**
+ * Find the non-overlapping allocation that saves the most defenders, then the
+ * greatest combined priority, while using the fewest towers.
+ * @param {Plan[]} plans
+ * @returns {Object[]}
+ */
+function allocateRescues(plans) {
+	const candidates = plans.map((plan) => ({
+		plan,
+		groups: healingGroups(plan),
+	}));
+	let best = { allocations: [], saved: 0, priority: 0, towers: 0 };
+
+	function search(index, used, allocations, priority) {
+		if (index === candidates.length) {
+			const result = {
+				allocations,
+				saved: allocations.length,
+				priority,
+				towers: used.size,
+			};
+			if (isBetterAllocation(result, best)) {
+				best = result;
+			}
+			return;
+		}
+
+		search(index + 1, used, allocations, priority);
+		const { plan, groups } = candidates[index];
+		for (const contributions of groups) {
+			if (contributions.some(({ tower }) => used.has(tower))) {
+				continue;
+			}
+			const nextUsed = new Set(used);
+			for (const { tower } of contributions) {
+				nextUsed.add(tower);
+			}
+			search(
+				index + 1,
+				nextUsed,
+				[...allocations, { plan, contributions }],
+				priority + plan.priority,
+			);
+		}
+	}
+
+	search(0, new Set(), [], 0);
+	return best.allocations;
+}
+
+/**
+ * Groups for Healing
+ * This allocation search has exponential complexity
+ * TODO: a bounded search or pruning strategy before scaling
+ * @param {Plan} plan
+ */
+function healingGroups(plan) {
+	const groups = [];
+	const count = plan.contributions.length;
+	for (let mask = 1; mask < 2 ** count; mask += 1) {
+		const contributions = plan.contributions.filter(
+			(contribution, index) => mask & (1 << index),
+		);
+		if (sumPower(contributions) >= plan.required) {
+			groups.push(contributions);
+		}
+	}
+	return groups.sort(
+		(a, b) => a.length - b.length || sumPower(a) - sumPower(b),
+	);
+}
+
+function isBetterAllocation(candidate, current) {
+	return (
+		candidate.saved > current.saved ||
+		(candidate.saved === current.saved &&
+			(candidate.priority > current.priority ||
+				(candidate.priority === current.priority &&
+					candidate.towers < current.towers)))
+	);
+}
+
+/**
  * Attack Hostile Creeps
+ * Performs a coordinated target selection,
+ * does not perform a coordinated damage assessment
+ * nor does it take into account for creeps with boosted TOUGH parts
  * @param {StructureTower[]} towers
  * @param {Creep[]} hostiles
  */
@@ -143,7 +275,7 @@ function attackHostiles(towers, hostiles) {
  * Prioritise Hostile Creeps
  * @param {Creep} creep
  * @param {StructureTower[]} towers
- * @returns
+ * @returns {number}
  */
 function hostilePriority(creep, towers) {
 	const danger =
@@ -161,6 +293,9 @@ function hostilePriority(creep, towers) {
 /**
  * Calculates the power for given active parts
  * Takes into account boosts if any
+ * the result is a boost-adjusted count of equivalent body parts
+ * TODO Future a function for multiplying by ATTACK_POWER, RANGED_ATTACK_POWER, and HEAL_POWER
+ * will give comparable HP-per-tick values
  * @param {Creep} creep
  * @param {BodyPartConstant} type
  * @param {string} effect
@@ -178,6 +313,8 @@ function activePartPower(creep, type, effect) {
 
 /**
  * Repair Structures
+ * Favours the greatest immediately useful repair amount over
+ * most strategically important structure
  * @param {Room} room
  * @param {StructureTower[]} towers
  * @returns {void}
@@ -259,6 +396,8 @@ function isCombatCapable(creep) {
 
 /**
  * Persists Creep Hit Points for future strategic assessment
+ * The previous-to-current HP difference is net health change, not actual incoming damage
+ * Storing a net-loss estimate on the creep's memory
  * @param {Creep} creeps
  */
 function rememberHits(creeps) {
@@ -268,13 +407,8 @@ function rememberHits(creeps) {
 }
 
 /**
- * @typedef {Object} Contributions
- * @property {StructureTower} tower
- * @property {number} power
- */
-/**
  * Sums the contributions of each tower to create total power
- * @param {Contributions[]} contributions
+ * @param {Contribution[]} contributions
  * @returns {number}
  */
 function sumPower(contributions) {

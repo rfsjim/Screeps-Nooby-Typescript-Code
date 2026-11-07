@@ -1,3 +1,5 @@
+// Obsoleted by Tower Manager
+// 0096453160ccc246da6133dbb659eb0ad0215f09 on development/colony-v2
 // create a new function for StructureTower
 StructureTower.prototype.busy = 0;
 

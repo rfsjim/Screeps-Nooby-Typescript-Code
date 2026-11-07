@@ -6,6 +6,8 @@ function installScreepsGlobals() {
 	const constants = {
 		OK: 0,
 		ERR_NOT_ENOUGH_ENERGY: -6,
+		ERR_NOT_ENOUGH_RESOURCES: -6,
+		ERR_INVALID_TARGET: -7,
 		ERR_INVALID_ARGS: -10,
 		ERR_BUSY: -4,
 		ERR_NOT_IN_RANGE: -9,
@@ -61,6 +63,11 @@ function installScreepsGlobals() {
 	Object.assign(global, constants);
 	global.BODYPART_COST = { work: 100, carry: 50, move: 50, claim: 600 };
 	global.RAMPART_HITS_MAX = { 2: 300000 };
+	global.BOOSTS = {
+		[ATTACK]: { XUH2O: { attack: 4 } },
+		[RANGED_ATTACK]: { XKHO2: { rangedAttack: 4 } },
+		[HEAL]: { XLHO2: { heal: 4, rangedHeal: 4 } },
+	};
 
 	global._ = {
 		filter(collection, predicate) {
