@@ -202,6 +202,16 @@ Where:
 
 $$\text{Survival margin} = \text{Current hits} - \text{Estimated incoming damage}$$
 
+$$H_{\text{projected}} = H_{\text{current}} + H_{\text{tower}} + H_{\text{other}} - D_{\text{incoming}}$$
+
+A creep beyond intervention is:
+
+$$H_{\text{projected}}\leq 0$$
+
+Will tower make a difference if
+
+$$H_{\text{without tower}}\leq0\quad\text{and}\quadH_{\text{with tower}}>0$$
+
 ## Useful Optimisations
 Screeps optimisation is best approached as a series of constrained engineering problems.
 
