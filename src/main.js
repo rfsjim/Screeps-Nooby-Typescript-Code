@@ -6,6 +6,7 @@ require('./prototype.terminal'); // common code for all terminals
 require('./version'); // check script version
 
 const init = require('./init'); // game init details
+const towerManager = require('./manager.tower');
 
 module.exports.loop = function () {
 	// get phase and initGame details
@@ -35,15 +36,15 @@ module.exports.loop = function () {
 		Game.creeps[name].runRole();
 	}
 
-	// Run tower commands - find all towers
-	const towers = _.filter(
-		Game.structures,
-		(s) => s.structureType === STRUCTURE_TOWER,
+	// Coordinate towers once per room so their combined power can be considered.
+	const towerRooms = new Set(
+		_.filter(
+			Game.structures,
+			(structure) => structure.structureType === STRUCTURE_TOWER,
+		).map((tower) => tower.room),
 	);
-	// for each tower
-	for (const tower of towers) {
-		// run tower logic
-		tower.defend();
+	for (const room of towerRooms) {
+		towerManager.run(room);
 	}
 
 	// for each spawn
