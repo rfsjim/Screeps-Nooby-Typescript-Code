@@ -1,13 +1,24 @@
 // create a new function for StructureTower
 StructureTower.prototype.busy = 0;
 
+/**
+ * Logic for the tower to defend heal and repair in the room
+ * @returns {void}
+ */
 StructureTower.prototype.defend = function () {
 	// find closest hostile mob
 	this.busy = 0;
-	const target = this.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+	const room = this.room;
+	if (!room) {
+		return;
+	}
+
+	let target = null;
+
+	target = this.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 	// if hostile creep exists
-	if (OK === this.attack(target)) {
-		this.busy = 1;
+	if (target && OK === this.attack(target)) {
+		return;
 	}
 
 	const ratio =
@@ -28,7 +39,7 @@ StructureTower.prototype.defend = function () {
 					s.structureType !== STRUCTURE_RAMPART,
 			},
 		);
-		if (closestDamagedStructure && ratio >= 0.5 && !this.busy) {
+		if (closestDamagedStructure) {
 			this.repair(closestDamagedStructure);
 		}
 	}
