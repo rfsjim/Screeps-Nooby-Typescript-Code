@@ -37,23 +37,30 @@
  *
  */
 
+const combatCapableParts = [ATTACK, RANGED_ATTACK, HEAL];
+
 module.exports = {
 	/**
 	 * Run Carl Douglas Role (Defenders)
 	 * @param {Creep} creep
 	 */
 	run: function (creep) {
+		const hostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS);
+		const friendlyCreeps = creep.room.find(FIND_MY_CREEPS);
 		const canRanged = creep.getActiveBodyparts(RANGED_ATTACK) > 0;
 		const canHeal = creep.getActiveBodyparts(HEAL) > 0;
-		let target = null;
+		const hasHostileCreeps = hostileCreeps > 0;
+		let attackTarget = null;
 
 		//find hostile creeps by priority to attack if creep has ranged attack parts
-		if (canRanged) {
-			const combatCapableParts = [ATTACK, RANGED_ATTACK, HEAL];
+		if (canRanged && hasHostileCreeps) {
+			const numberRangedAttack = creep.getActiveBodyparts(RANGED_ATTACK);
+			// TODO further with calc attack power
+			// eslint-disable-next-line no-unused-vars
+			const rangedAttackPower = numberRangedAttack * RANGED_ATTACK_POWER;
 			const hostileCapableParts = [CLAIM, WORK];
-			const hostileCreeps = creep.room.find(FIND_HOSTILE_CREEPS);
 
-			target = selectTarget(creep, hostileCreeps, [
+			attackTarget = selectTarget(creep, hostileCreeps, [
 				combatCapableParts,
 				hostileCapableParts,
 			]);
@@ -75,71 +82,40 @@ module.exports = {
 		 * - then any injured friendly with no combat threat
 		 **/
 		if (canHeal) {
-			let healTarget = undefined;
-			//first heal self if needed
-			if (creep.hits < creep.hitsMax) {
-				creep.heal(creep);
-			} else {
-				//find my creeps in room to heal if required
-				const myDamagedCreeps = creep.room.find(FIND_MY_CREEPS, {
-					filter: (c) => c.hits < c.hitsMax,
-				});
-				healTarget =
-					myDamagedCreeps.find(
-						(c) =>
-							creep.pos.isNearTo(c) &&
-							hasActivePart(c, combatCapableParts),
-					) ??
-					myDamagedCreeps.find(
-						(c) =>
-							creep.pos.inRangeTo(c, 3) &&
-							hasActivePart(c, combatCapableParts),
-					) ??
-					myDamagedCreeps.find((c) => {
-						if (hasActivePart(c, combatCapableParts)) {
-							const previous =
-								c.memory.towerManagerPreviousHits ?? c.hits;
-							const projectedDamage = Math.max(
-								0,
-								previous - c.hits,
-							);
-							if (
-								projectedDamage === 0 ||
-								c.hits > projectedDamage
-							) {
-								return false;
-							}
-							return creep.pos.inRangeTo(c, 12);
-						}
-						return false;
-					}) ??
-					myDamagedCreeps.find(
-						(c) =>
-							creep.pos.inRangeTo(c, 12) &&
-							hasActivePart(c, combatCapableParts),
-					) ??
-					myDamagedCreeps[0];
-			}
+			if (canHeal) {
+				const healTarget = selectHealTarget(
+					creep,
+					friendlyCreeps,
+					hasHostileCreeps,
+				);
 
-			if (healTarget) {
-				// melee heal is better try it first
-				if (creep.heal(healTarget) === ERR_NOT_IN_RANGE) {
-					// if out of melee range try ranged heal
-					if (creep.rangedHeal(healTarget) === ERR_NOT_IN_RANGE) {
-						// otherwise move closer
+				if (healTarget) {
+					const range = creep.pos.getRangeTo(healTarget);
+
+					if (range <= 1) {
+						// Direct healing is compatible with ranged attacking.
+						creep.heal(healTarget);
+					} else if (
+						range <= 3 &&
+						hasHostileCreeps &&
+						isCreepEndangered(healTarget)
+					) {
+						// Explicitly sacrifice ranged attack for emergency healing.
+						creep.rangedHeal(healTarget);
+					} else if (!hasHostileCreeps) {
+						// Travel to assist during peacetime.
 						creep.moveTo(healTarget);
 					}
 				}
-				return;
 			}
 		}
 
 		//work on attacking
-		if (target) {
+		if (attackTarget) {
 			// creeps with ranged attack should move in with ranged attack first
 			if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
 				// melee attack stronger than ranged attack, try melee first
-				if (creep.attack(target) === ERR_NOT_IN_RANGE) {
+				if (creep.attack(attackTarget) === ERR_NOT_IN_RANGE) {
 					// too far away for melee try rangedAttacks
 					const targets = creep.pos.findInRange(
 						FIND_HOSTILE_CREEPS,
@@ -150,15 +126,15 @@ module.exports = {
 						creep.rangedMassAttack();
 						return;
 					} else if (
-						creep.rangedAttack(target) === ERR_NOT_IN_RANGE
+						creep.rangedAttack(attackTarget) === ERR_NOT_IN_RANGE
 					) {
 						//keep walking towards the badie
-						creep.moveTo(target);
+						creep.moveTo(attackTarget);
 					}
 				}
 			} else if (creep.getActiveBodyparts(ATTACK) > 0) {
-				if (creep.attack(target) === ERR_NOT_IN_RANGE) {
-					creep.moveTo(target);
+				if (creep.attack(attackTarget) === ERR_NOT_IN_RANGE) {
+					creep.moveTo(attackTarget);
 				}
 			}
 		}
@@ -192,4 +168,49 @@ function selectTarget(creep, targets, priorityGroups) {
 	}
 
 	return targets.length > 0 ? creep.pos.findClosestByRange(targets) : null;
+}
+
+/**
+ * Returns if Creep is Endangered
+ * @param {Creep} creep
+ * @returns {boolean} Is Creep Endangered?
+ */
+function isCreepEndangered(creep) {
+	const previous = creep.memory.towerManagerPreviousHits ?? creep.hits;
+	const projectedDamage = Math.max(0, previous - creep.hits);
+
+	return projectedDamage > 0 && creep.hits <= projectedDamage;
+}
+
+/**
+ * Selects the first matching healing target according to Carl's triage policy.
+ * @param {Creep} carl
+ * @param {Creep[]} friendlies
+ * @param {boolean} hostilesPresent
+ * @returns {Creep|undefined} creep target to heal
+ */
+function selectHealTarget(carl, friendlies, hostilesPresent) {
+	if (carl.hits < carl.hitsMax) {
+		return carl;
+	}
+
+	const injured = friendlies.filter((c) => c.hits < c.hitsMax);
+
+	const combatInjured = injured.filter((c) =>
+		hasActivePart(c, combatCapableParts),
+	);
+
+	const endangered = combatInjured.filter(isCreepEndangered);
+
+	return (
+		endangered.find((c) => carl.pos.isNearTo(c)) ??
+		combatInjured.find((c) => carl.pos.isNearTo(c)) ??
+		endangered.find((c) => carl.pos.inRangeTo(c, 3)) ??
+		combatInjured.find((c) => carl.pos.inRangeTo(c, 3)) ??
+		(!hostilesPresent
+			? (endangered.find((c) => carl.pos.inRangeTo(c, 12)) ??
+				combatInjured.find((c) => carl.pos.inRangeTo(c, 12)) ??
+				injured[0])
+			: undefined)
+	);
 }
