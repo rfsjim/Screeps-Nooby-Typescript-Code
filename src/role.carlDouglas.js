@@ -54,10 +54,6 @@ module.exports = {
 
 		//find hostile creeps by priority to attack if creep has ranged attack parts
 		if (canRanged && hasHostileCreeps) {
-			const numberRangedAttack = creep.getActiveBodyparts(RANGED_ATTACK);
-			// TODO further with calc attack power
-			// eslint-disable-next-line no-unused-vars
-			const rangedAttackPower = numberRangedAttack * RANGED_ATTACK_POWER;
 			const hostileCapableParts = [CLAIM, WORK];
 
 			attackTarget = selectTarget(creep, hostileCreeps, [
@@ -110,31 +106,25 @@ module.exports = {
 			}
 		}
 
-		//work on attacking
-		if (attackTarget) {
-			// creeps with ranged attack should move in with ranged attack first
-			if (creep.getActiveBodyparts(RANGED_ATTACK) > 0) {
-				// melee attack stronger than ranged attack, try melee first
-				if (creep.attack(attackTarget) === ERR_NOT_IN_RANGE) {
-					// too far away for melee try rangedAttacks
-					const targets = creep.pos.findInRange(
-						FIND_HOSTILE_CREEPS,
-						3,
+		// Work on attacking.
+		// All combat creeps have ranged attack parts.
+		if (attackTarget && canRanged) {
+			const nearbyHostiles = creep.pos.findInRange(
+				FIND_HOSTILE_CREEPS,
+				1,
+			);
+
+			if (nearbyHostiles.length > 1) {
+				creep.rangedMassAttack();
+			} else {
+				const result = creep.rangedAttack(attackTarget);
+
+				if (result === ERR_NOT_IN_RANGE) {
+					creep.moveTo(attackTarget, { range: 3 });
+				} else if (result !== OK) {
+					console.error(
+						`Error attacking ${attackTarget.name}: ${result}`,
 					);
-					if (targets.length > 0) {
-						// rangedMassAttack provides bonus splash damage
-						creep.rangedMassAttack();
-						return;
-					} else if (
-						creep.rangedAttack(attackTarget) === ERR_NOT_IN_RANGE
-					) {
-						//keep walking towards the badie
-						creep.moveTo(attackTarget);
-					}
-				}
-			} else if (creep.getActiveBodyparts(ATTACK) > 0) {
-				if (creep.attack(attackTarget) === ERR_NOT_IN_RANGE) {
-					creep.moveTo(attackTarget);
 				}
 			}
 		}

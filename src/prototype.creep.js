@@ -88,3 +88,8 @@ Creep.prototype.pickUpResource = function () {
 		this.moveTo(target);
 	}
 };
+
+// TODO: Implement threat-aware movement.
+// - Flee when survival takes priority over the assigned task.
+// - Kite when ranged combat can be maintained at a safer distance.
+// - Coordinate movement with existing healing and attack objectives.
