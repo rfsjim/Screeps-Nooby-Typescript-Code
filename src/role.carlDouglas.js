@@ -49,8 +49,9 @@ module.exports = {
 		const friendlyCreeps = creep.room.find(FIND_MY_CREEPS);
 		const canRanged = creep.getActiveBodyparts(RANGED_ATTACK) > 0;
 		const canHeal = creep.getActiveBodyparts(HEAL) > 0;
-		const hasHostileCreeps = hostileCreeps > 0;
+		const hasHostileCreeps = hostileCreeps.length > 0;
 		let attackTarget = null;
+		let usedRangedHeal = false;
 
 		//find hostile creeps by priority to attack if creep has ranged attack parts
 		if (canRanged && hasHostileCreeps) {
@@ -78,37 +79,36 @@ module.exports = {
 		 * - then any injured friendly with no combat threat
 		 **/
 		if (canHeal) {
-			if (canHeal) {
-				const healTarget = selectHealTarget(
-					creep,
-					friendlyCreeps,
-					hasHostileCreeps,
-				);
+			const healTarget = selectHealTarget(
+				creep,
+				friendlyCreeps,
+				hasHostileCreeps,
+			);
 
-				if (healTarget) {
-					const range = creep.pos.getRangeTo(healTarget);
+			if (healTarget) {
+				const range = creep.pos.getRangeTo(healTarget);
 
-					if (range <= 1) {
-						// Direct healing is compatible with ranged attacking.
-						creep.heal(healTarget);
-					} else if (
-						range <= 3 &&
-						hasHostileCreeps &&
-						isCreepEndangered(healTarget)
-					) {
-						// Explicitly sacrifice ranged attack for emergency healing.
-						creep.rangedHeal(healTarget);
-					} else if (!hasHostileCreeps) {
-						// Travel to assist during peacetime.
-						creep.moveTo(healTarget);
-					}
+				if (range <= 1) {
+					// Direct healing is compatible with ranged attacking.
+					creep.heal(healTarget);
+				} else if (
+					range <= 3 &&
+					hasHostileCreeps &&
+					isCreepEndangered(healTarget)
+				) {
+					// Explicitly sacrifice ranged attack for emergency healing.
+					creep.rangedHeal(healTarget);
+					usedRangedHeal = true;
+				} else if (!hasHostileCreeps) {
+					// Travel to assist during peacetime.
+					creep.moveTo(healTarget);
 				}
 			}
 		}
 
 		// Work on attacking.
 		// All combat creeps have ranged attack parts.
-		if (attackTarget && canRanged) {
+		if (attackTarget && canRanged && !usedRangedHeal) {
 			const nearbyHostiles = creep.pos.findInRange(
 				FIND_HOSTILE_CREEPS,
 				1,
@@ -149,7 +149,7 @@ function hasActivePart(creep, parts) {
  * @returns {Creep | null} Creep Target or null
  */
 function selectTarget(creep, targets, priorityGroups) {
-	for (const parts in priorityGroups) {
+	for (const parts of priorityGroups) {
 		const matchingTargets = targets.filter((c) => hasActivePart(c, parts));
 
 		if (matchingTargets.length > 0) {
@@ -190,7 +190,8 @@ function selectHealTarget(carl, friendlies, hostilesPresent) {
 		hasActivePart(c, combatCapableParts),
 	);
 
-	const endangered = combatInjured.filter(isCreepEndangered);
+	const endangered = injured.filter(isCreepEndangered);
+	const endangeredCombat = combatInjured.filter(isCreepEndangered);
 
 	return (
 		endangered.find((c) => carl.pos.isNearTo(c)) ??
@@ -198,7 +199,7 @@ function selectHealTarget(carl, friendlies, hostilesPresent) {
 		endangered.find((c) => carl.pos.inRangeTo(c, 3)) ??
 		combatInjured.find((c) => carl.pos.inRangeTo(c, 3)) ??
 		(!hostilesPresent
-			? (endangered.find((c) => carl.pos.inRangeTo(c, 12)) ??
+			? (endangeredCombat.find((c) => carl.pos.inRangeTo(c, 12)) ??
 				combatInjured.find((c) => carl.pos.inRangeTo(c, 12)) ??
 				injured[0])
 			: undefined)
