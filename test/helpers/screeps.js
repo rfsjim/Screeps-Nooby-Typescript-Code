@@ -53,6 +53,7 @@ function installScreepsGlobals() {
 		WORK: 'work',
 		CARRY: 'carry',
 		MOVE: 'move',
+		TOUGH: 'tough',
 		CLAIM: 'claim',
 		ATTACK: 'attack',
 		RANGED_ATTACK: 'ranged_attack',
@@ -61,7 +62,16 @@ function installScreepsGlobals() {
 	};
 
 	Object.assign(global, constants);
-	global.BODYPART_COST = { work: 100, carry: 50, move: 50, claim: 600 };
+	global.BODYPART_COST = {
+		work: 100,
+		carry: 50,
+		move: 50,
+		tough: 10,
+		claim: 600,
+		attack: 80,
+		ranged_attack: 150,
+		heal: 250,
+	};
 	global.RAMPART_HITS_MAX = { 2: 300000 };
 	global.BOOSTS = {
 		[ATTACK]: { XUH2O: { attack: 4 } },

@@ -1111,3 +1111,62 @@ test('a long-distance harvester propagates ERR_BUSY from the spawn', () => {
 		['longDistanceHarvester'],
 	);
 });
+
+const carlDouglasBodies = [
+	{ energy: 560, groups: 1 },
+	{ energy: 1120, groups: 2 },
+	{ energy: 10000, groups: 8 },
+];
+
+for (const { energy, groups } of carlDouglasBodies) {
+	test(`Carl Douglas uses ${groups} complete body groups with ${energy} energy`, () => {
+		const { spawn, spawnAttempts } = createSpawnScenario({
+			room: createMockRoom({ energy }),
+		});
+
+		const result = spawn.spawnCarlDouglas(energy);
+
+		assert.deepEqual(result, {
+			name: 'carlDouglas42',
+			result: OK,
+		});
+		assert.equal(spawnAttempts.length, 1);
+		assert.deepEqual(spawnAttempts[0].body, [
+			...Array(groups).fill(TOUGH),
+			...Array(groups).fill(RANGED_ATTACK),
+			...Array(groups).fill(HEAL),
+			...Array(groups * 3).fill(MOVE),
+		]);
+		assert.deepEqual(spawnAttempts[0].memory, { role: 'carlDouglas' });
+		assert.ok(spawnAttempts[0].body.length <= MAX_CREEP_SIZE);
+	});
+}
+
+test('Carl Douglas requires enough energy for one complete body group', () => {
+	const { spawn, spawnAttempts } = createSpawnScenario({
+		room: createMockRoom({ energy: 559 }),
+	});
+
+	const result = spawn.spawnCarlDouglas(559);
+
+	assert.deepEqual(result, {
+		name: undefined,
+		result: ERR_NOT_ENOUGH_ENERGY,
+	});
+	assert.deepEqual(spawnAttempts, []);
+});
+
+test('Carl Douglas propagates the spawn result', () => {
+	const { spawn, spawnAttempts } = createSpawnScenario({
+		room: createMockRoom({ energy: 560 }),
+		spawnResults: { carlDouglas: ERR_BUSY },
+	});
+
+	const result = spawn.spawnCarlDouglas(560);
+
+	assert.deepEqual(result, {
+		name: 'carlDouglas42',
+		result: ERR_BUSY,
+	});
+	assert.equal(spawnAttempts.length, 1);
+});

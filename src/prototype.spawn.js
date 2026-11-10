@@ -8,6 +8,7 @@ const listOfRoles = [
 	'builder',
 	'wallRepairer',
 	'extractor',
+	'carlDouglas',
 ];
 
 // create a new function for StructureSpawn
@@ -41,6 +42,7 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 	//TODO Needed? Currently not used:
 	// const canFundSpecialisedRecovery = currentEnergy >= 800;
 	const hasRecoveryEnergy = availableEnergy >= 800;
+	const hasHostiles = room.find(FIND_HOSTILE_CREEPS) > 0;
 	const ownedRoomCount = Object.values(Game.rooms).filter(
 		(room) => room.controller?.my,
 	).length;
@@ -172,6 +174,26 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 			if (role === 'harvester') {
 				continue;
 			}
+			if (role === 'carlDouglas' && hasHostiles) {
+				const existingCarls = numberOfCreeps[role] ?? 0;
+				const partsPerGroup = 6;
+				const maxGroups = Math.floor(MAX_CREEP_SIZE / partsPerGroup);
+				const groups = Math.min(existingCarls + 1, maxGroups);
+				const energyPerGroup =
+					BODYPART_COST[TOUGH] +
+					BODYPART_COST[HEAL] +
+					BODYPART_COST[RANGED_ATTACK] +
+					3 * BODYPART_COST[MOVE];
+				const energyBudget = energyPerGroup * groups;
+				if (currentEnergy >= energyBudget) {
+					const attempt = this.spawnCarlDouglas(energyBudget);
+
+					if (attempt.result === OK) {
+						name = attempt.name;
+						break;
+					}
+				}
+			}
 			// check if any orders to claim a new room
 			if (role === 'claimer' && this.memory.claimRoom !== undefined) {
 				// check available energy and try to spawn claimer
@@ -225,6 +247,9 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 						continue;
 					}
 					if (role === 'extractor' && !canSpawnExtractor) {
+						continue;
+					}
+					if (role === 'carlDouglas' && !hasHostiles) {
 						continue;
 					}
 
@@ -487,6 +512,64 @@ StructureSpawn.prototype.createLorry = function (energy) {
 		},
 	};
 	const name = 'lorry' + Game.time;
+
+	return {
+		name: name,
+		result: this.spawnCreep(body, name, creepMemory),
+	};
+};
+
+/**
+ * Spawns Carl Douglas Home Base Defender
+ * @param {number} energy
+ */
+StructureSpawn.prototype.spawnCarlDouglas = function (energy) {
+	// composition of fighter changes depending on room size
+	const roleName = 'carlDouglas';
+	const body = [];
+	const partsPerGroup = 6;
+	const minRequiredEnergy =
+		BODYPART_COST[MOVE] * 3 +
+		BODYPART_COST[TOUGH] +
+		BODYPART_COST[RANGED_ATTACK] +
+		BODYPART_COST[HEAL];
+
+	if (energy < minRequiredEnergy) {
+		return {
+			name: undefined,
+			result: ERR_NOT_ENOUGH_ENERGY,
+		};
+	}
+
+	const numberOfParts = Math.min(
+		Math.floor(energy / minRequiredEnergy),
+		Math.floor(MAX_CREEP_SIZE / partsPerGroup),
+	);
+
+	for (let i = 0; i < numberOfParts; i++) {
+		body.push(TOUGH);
+	}
+
+	for (let i = 0; i < numberOfParts; i++) {
+		body.push(RANGED_ATTACK);
+	}
+
+	for (let i = 0; i < numberOfParts; i++) {
+		body.push(HEAL);
+	}
+
+	for (let i = 0; i < numberOfParts; i++) {
+		body.push(MOVE);
+		body.push(MOVE);
+		body.push(MOVE);
+	}
+
+	const creepMemory = {
+		memory: {
+			role: roleName,
+		},
+	};
+	const name = roleName + Game.time;
 
 	return {
 		name: name,

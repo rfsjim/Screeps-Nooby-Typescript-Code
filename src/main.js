@@ -56,13 +56,6 @@ module.exports.loop = function () {
 		if (Game.spawns[spawnName].room.terminal && Game.time % 10 === 0) {
 			Game.spawns[spawnName].room.terminal.findTrade();
 		}
-
-		// find hostile creeps for defense
-		const targets = Game.spawns[spawnName].room.find(FIND_HOSTILE_CREEPS);
-		if (targets.length > 0) {
-			console.log('Baddie found');
-			// Game.spawns[spawnName].engageSafeMode();
-		}
 	}
 
 	if (!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION !== SCRIPT_VERSION) {
