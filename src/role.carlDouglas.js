@@ -122,7 +122,7 @@ module.exports = {
 				if (result === ERR_NOT_IN_RANGE) {
 					creep.moveTo(attackTarget, { range: 3 });
 				} else if (result !== OK) {
-					console.error(
+					console.log(
 						`Error attacking ${attackTarget.name}: ${result}`,
 					);
 				}
