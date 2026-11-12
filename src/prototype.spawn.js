@@ -175,10 +175,10 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
 				continue;
 			}
 			if (role === 'carlDouglas' && hasHostiles) {
-				const existingCarls = numberOfCreeps[role] ?? 0;
+				const existingCarlCount = numberOfCreeps[role] ?? 0;
 				const partsPerGroup = 6;
 				const maxGroups = Math.floor(MAX_CREEP_SIZE / partsPerGroup);
-				const groups = Math.min(existingCarls + 1, maxGroups);
+				const groups = Math.min(existingCarlCount + 1, maxGroups);
 				const energyPerGroup =
 					BODYPART_COST[TOUGH] +
 					BODYPART_COST[HEAL] +
