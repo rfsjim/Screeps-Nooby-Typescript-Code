@@ -11,313 +11,446 @@ const listOfRoles = [
 	'carlDouglas',
 ];
 
-// create a new function for StructureSpawn
-StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
-	// find room name
-	const room = this.room;
-	if (!this.my || this.spawning) {
-		return;
-	}
-	const sources = room.find(FIND_SOURCES);
+const spawnPriority = {
+	routine: 100,
+	miner: 300,
+	defence: 400,
+	recovery: 500,
+};
 
-	// find creeps in room
-	const creepsInRoom = room.find(FIND_MY_CREEPS);
-	const numberOfCreeps = {};
+const affordabilityPolicy = {
+	wait: 'wait',
+	downsize: 'downsize',
+	skip: 'skip',
+};
+
+// Transient per-tick coordination. Snapshots contain live game objects and
+// therefore must never be written to persistent Screeps Memory.
+const roomSpawnSchedules = new WeakMap();
+
+function getSpawningMemory(spawn) {
+	const name = spawn.spawning?.name;
+	if (!name) {
+		return undefined;
+	}
+	const memoryCreeps =
+		typeof Memory === 'undefined' ? undefined : Memory.creeps;
+	return Game.creeps[name]?.memory ?? memoryCreeps?.[name];
+}
+
+/**
+ * Capture every fact used for demand calculation once per room and tick.
+ */
+StructureSpawn.prototype.createSpawnRoomSnapshot = function () {
+	const room = this.room;
+	const creeps = room.find(FIND_MY_CREEPS);
+	const sources = room.find(FIND_SOURCES);
+	const structures = room.find(FIND_STRUCTURES);
+	const myStructures =
+		room.controller?.level >= 6 ? room.find(FIND_MY_STRUCTURES) : [];
+	const constructionSites = room.find(FIND_CONSTRUCTION_SITES, {
+		filter: (site) => site.my,
+	});
+	const hostiles = room.find(FIND_HOSTILE_CREEPS);
+	const roomSpawns = Object.values(Game.spawns ?? {}).filter(
+		(spawn) => spawn.my && spawn.room.name === room.name,
+	);
+	if (!roomSpawns.includes(this)) {
+		roomSpawns.push(this);
+	}
+	const spawningCreeps = roomSpawns
+		.map((spawn) => getSpawningMemory(spawn))
+		.filter(Boolean);
+	const operationalPopulation = {};
+	const committedPopulation = {};
 	for (const role of listOfRoles) {
-		numberOfCreeps[role] = _.sum(
-			creepsInRoom,
-			(c) => c.memory.role === role,
+		operationalPopulation[role] = _.sum(
+			creeps,
+			(creep) => creep.memory.role === role,
+		);
+		committedPopulation[role] = _.sum(
+			[...creeps, ...spawningCreeps],
+			(creep) => (creep.memory?.role ?? creep.role) === role,
 		);
 	}
-	const maxEnergy = room.energyCapacityAvailable;
-	const currentEnergy = room.energyAvailable;
-	const containers = room.find(FIND_STRUCTURES, {
-		filter: (s) => s.structureType === STRUCTURE_CONTAINER,
-	});
-	const containerEnergy = _.sum(containers, (c) => c.store[RESOURCE_ENERGY]);
+	const containers = structures.filter(
+		(structure) => structure.structureType === STRUCTURE_CONTAINER,
+	);
+	const containerEnergy = _.sum(
+		containers,
+		(container) => container.store[RESOURCE_ENERGY],
+	);
 	const storageEnergy = room.storage?.store[RESOURCE_ENERGY] ?? 0;
-	const availableEnergy = currentEnergy + storageEnergy + containerEnergy;
 
-	const canSpawnHarvester = currentEnergy >= 200;
-	//TODO Needed? Currently not used:
-	// const canFundSpecialisedRecovery = currentEnergy >= 800;
-	const hasRecoveryEnergy = availableEnergy >= 800;
-	const hasHostiles = room.find(FIND_HOSTILE_CREEPS) > 0;
-	const ownedRoomCount = Object.values(Game.rooms).filter(
-		(room) => room.controller?.my,
-	).length;
+	return {
+		roomName: room.name,
+		tick: Game.time,
+		energy: {
+			available: room.energyAvailable,
+			capacity: room.energyCapacityAvailable,
+			container: containerEnergy,
+			storage: storageEnergy,
+		},
+		creeps,
+		spawningCreeps,
+		operationalPopulation,
+		committedPopulation,
+		policy: room.memory.spawnPolicy,
+		sources,
+		structures,
+		myStructures,
+		containers,
+		constructionSites,
+		hostiles,
+		roomSpawns,
+		controllerLevel: room.controller?.level ?? 0,
+		hasExtractor: myStructures.some(
+			(structure) => structure.structureType === STRUCTURE_EXTRACTOR,
+		),
+		hasAvailableClaimSlot:
+			Object.values(Game.rooms).filter(
+				(gameRoom) => gameRoom.controller?.my,
+			).length < Game.gcl.level,
+	};
+};
 
-	let name = undefined;
+function addDemand(queue, request) {
+	queue.push({ ...request, sequence: queue.length });
+}
 
-	// Priority 1 - Keep the colony safe and productive
-	const hasHarvester = numberOfCreeps.harvester > 0;
-	const hasLorry = numberOfCreeps.lorry > 0;
-	const hasMiner = numberOfCreeps.miner > 0;
+function addRecoveryDemand(snapshot, queue) {
+	const { operationalPopulation, committedPopulation, energy } = snapshot;
+	const hasOperationalHarvester = operationalPopulation.harvester > 0;
+	const hasOperationalLorry = operationalPopulation.lorry > 0;
+	const hasOperationalMiner = operationalPopulation.miner > 0;
+	const hasEnergySupply = hasOperationalMiner || energy.container > 0;
+	const hasEnergyProduction = hasOperationalHarvester || hasOperationalMiner;
+	const hasEnergyDelivery =
+		hasOperationalHarvester || (hasOperationalLorry && hasEnergySupply);
+	const hasRecoveryEnergy =
+		energy.available + energy.container + energy.storage >= 800;
 
-	const hasEnergySupply = hasMiner || containerEnergy > 0;
-	const hasEnergyProduction = hasHarvester || hasMiner;
-	const hasEnergyDelivery = hasHarvester || (hasLorry && hasEnergySupply);
-	const hasTransportableEnergy = containerEnergy + storageEnergy > 0;
-	const hasConstructionSites =
-		room.find(FIND_CONSTRUCTION_SITES, {
-			filter: (s) => s.my,
-		}).length > 0;
-	const hasAvailableClaimSlot = ownedRoomCount < Game.gcl.level;
-	let hasExtractor = false;
-	if (room.controller?.level >= 6) {
-		hasExtractor =
-			room.find(FIND_MY_STRUCTURES, {
-				filter: (structure) =>
-					structure.structureType === STRUCTURE_EXTRACTOR,
-			}).length > 0;
+	if (hasEnergyProduction && hasEnergyDelivery) {
+		return false;
 	}
-
-	const needsEconomyRecovery = !hasEnergyProduction || !hasEnergyDelivery;
-	const needsEnergyTransport = !hasHarvester && !hasLorry;
-	const needsRepairs =
-		room.find(FIND_STRUCTURES, {
-			filter: (s) =>
-				s.hits < s.hitsMax &&
-				s.structureType !== STRUCTURE_WALL &&
-				s.structureType !== STRUCTURE_RAMPART,
-		}).length > 0;
-	// TODO: Review wall/rampart repair thresholds and align with role target selection.
-	const needsWallRepairs =
-		room.find(FIND_STRUCTURES, {
-			filter: (s) =>
-				(s.structureType === STRUCTURE_WALL ||
-					s.structureType === STRUCTURE_RAMPART) &&
-				s.hits < s.hitsMax * 0.5,
-		}).length > 0;
-
-	const canSpawnLorry =
-		currentEnergy >= 150 &&
+	if (
+		committedPopulation.lorry === 0 &&
 		hasRecoveryEnergy &&
-		hasTransportableEnergy &&
-		needsEnergyTransport;
-	const canSpawnExtractor =
-		room.controller?.level >= 6 &&
-		hasExtractor &&
-		room.storage !== undefined &&
-		room.terminal !== undefined;
+		energy.container + energy.storage > 0
+	) {
+		addDemand(queue, {
+			key: 'recovery-lorry',
+			role: 'lorry',
+			priority: spawnPriority.recovery,
+			minEnergy: 150,
+			desiredEnergy: 150,
+			affordability: affordabilityPolicy.wait,
+		});
+	}
+	if (committedPopulation.harvester === 0) {
+		addDemand(queue, {
+			key: 'recovery-harvester',
+			role: 'harvester',
+			priority: spawnPriority.recovery - 1,
+			minEnergy: 200,
+			desiredEnergy: 200,
+			affordability: affordabilityPolicy.wait,
+		});
+	}
+	return true;
+}
 
-	if (needsEconomyRecovery) {
-		if (canSpawnLorry) {
-			const attempt = this.createLorry(
-				BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE],
-			);
-
-			if (attempt.result === OK) {
-				name = attempt.name;
-				return;
-			}
-			if (attempt.result === ERR_BUSY) {
-				return;
-			}
-		}
-		if (canSpawnHarvester) {
-			const attempt = this.createCustomCreep(200, 'harvester');
-
-			if (attempt.result === OK) {
-				name = attempt.name;
-				return;
-			}
-			if (attempt.result === ERR_BUSY) {
-				return;
-			}
-		}
+function addDefenceDemand(snapshot, queue) {
+	if (snapshot.hostiles.length === 0) {
 		return;
 	}
-	// Priority 2 maintain dedicated miners
-	for (const source of sources) {
-		const sourceContainer = containers.find((container) =>
+	const groupCost =
+		BODYPART_COST[TOUGH] +
+		BODYPART_COST[RANGED_ATTACK] +
+		BODYPART_COST[HEAL] +
+		3 * BODYPART_COST[MOVE];
+	const desiredGroups = Math.min(
+		snapshot.committedPopulation.carlDouglas + 1,
+		Math.floor(MAX_CREEP_SIZE / 6),
+	);
+	addDemand(queue, {
+		key: 'defence-carlDouglas',
+		role: 'carlDouglas',
+		priority: spawnPriority.defence,
+		minEnergy: groupCost,
+		desiredEnergy: groupCost * desiredGroups,
+		energyStep: groupCost,
+		affordability: affordabilityPolicy.downsize,
+	});
+}
+
+function addMinerDemand(snapshot, queue) {
+	const assignedSourceIds = new Set(
+		[...snapshot.creeps, ...snapshot.spawningCreeps]
+			.filter(
+				(creep) =>
+					(creep.memory?.role ?? creep.role) === 'miner' &&
+					(creep.memory?.sourceId ?? creep.sourceId),
+			)
+			.map((creep) => creep.memory?.sourceId ?? creep.sourceId),
+	);
+	for (const source of snapshot.sources) {
+		const hasContainer = snapshot.containers.some((container) =>
 			source.pos.inRangeTo(container.pos, 1),
 		);
-
-		if (!sourceContainer) {
-			continue;
+		if (hasContainer && !assignedSourceIds.has(source.id)) {
+			addDemand(queue, {
+				key: `miner-${source.id}`,
+				role: 'miner',
+				priority: spawnPriority.miner,
+				minEnergy: BODYPART_COST[WORK] * 5 + BODYPART_COST[MOVE],
+				desiredEnergy: BODYPART_COST[WORK] * 5 + BODYPART_COST[MOVE],
+				affordability: affordabilityPolicy.wait,
+				sourceId: source.id,
+			});
 		}
+	}
+}
 
-		const hasAssignedMiner = creepsInRoom.some(
-			(c) => c.memory.role === 'miner' && c.memory.sourceId === source.id,
-		);
+function addConfiguredRoleDemand(snapshot, queue, spawn) {
+	const needsConstruction = snapshot.constructionSites.length > 0;
+	const needsRepairs = snapshot.structures.some(
+		(structure) =>
+			structure.hits < structure.hitsMax &&
+			structure.structureType !== STRUCTURE_WALL &&
+			structure.structureType !== STRUCTURE_RAMPART,
+	);
+	const needsWallRepairs = snapshot.structures.some(
+		(structure) =>
+			(structure.structureType === STRUCTURE_WALL ||
+				structure.structureType === STRUCTURE_RAMPART) &&
+			structure.hits < structure.hitsMax * 0.5,
+	);
+	const extractorReady =
+		snapshot.controllerLevel >= 6 &&
+		snapshot.hasExtractor &&
+		spawn.room.storage !== undefined &&
+		spawn.room.terminal !== undefined;
 
-		if (hasAssignedMiner) {
-			continue;
-		}
-
-		const minerCost = BODYPART_COST[WORK] * 5 + BODYPART_COST[MOVE];
-
-		if (currentEnergy < minerCost) {
-			return;
-		}
-
-		const attempt = this.createMiner(source.id);
-		if (attempt.result === OK) {
-			name = attempt.name;
-			return;
-		}
-
+	for (const role of listOfRoles) {
 		if (
-			attempt.result === ERR_BUSY ||
-			attempt.result === ERR_NOT_ENOUGH_ENERGY
+			role === 'harvester' ||
+			role === 'miner' ||
+			role === 'claimer' ||
+			role === 'carlDouglas'
 		) {
-			return;
+			continue;
 		}
+		if (role === 'builder' && !needsConstruction) {
+			continue;
+		}
+		if (role === 'repairer' && !needsRepairs) {
+			continue;
+		}
+		if (role === 'wallRepairer' && !needsWallRepairs) {
+			continue;
+		}
+		if (role === 'extractor' && !extractorReady) {
+			continue;
+		}
+		const deficit =
+			(snapshot.policy.minCreeps?.[role] ?? 0) -
+			(snapshot.committedPopulation[role] ?? 0);
+		for (let index = 0; index < deficit; index++) {
+			const isLorry = role === 'lorry';
+			addDemand(queue, {
+				key: `role-${role}-${index}`,
+				role,
+				priority: spawnPriority.routine,
+				minEnergy: isLorry ? 150 : 200,
+				desiredEnergy: snapshot.energy.capacity,
+				energyStep: isLorry ? 150 : 200,
+				affordability: isLorry
+					? affordabilityPolicy.downsize
+					: affordabilityPolicy.wait,
+			});
+		}
+	}
+}
 
+function addClaimDemand(snapshot, queue) {
+	if (
+		snapshot.policy.claimRoom === undefined ||
+		!snapshot.hasAvailableClaimSlot
+	) {
+		return;
+	}
+	addDemand(queue, {
+		key: 'claimer',
+		role: 'claimer',
+		priority: spawnPriority.routine,
+		minEnergy: BODYPART_COST[CLAIM] + BODYPART_COST[MOVE],
+		desiredEnergy: BODYPART_COST[CLAIM] + BODYPART_COST[MOVE],
+		affordability: affordabilityPolicy.skip,
+		target: snapshot.policy.claimRoom,
+	});
+}
+
+function addRemoteDemand(snapshot, queue) {
+	for (const target in snapshot.policy.minLongDistanceHarvesters ?? {}) {
+		const active = _.sum(
+			Game.creeps,
+			(creep) =>
+				creep.memory.role === 'longDistanceHarvester' &&
+				creep.memory.target === target,
+		);
+		const spawning = _.sum(
+			snapshot.spawningCreeps,
+			(creep) =>
+				(creep.memory?.role ?? creep.role) ===
+					'longDistanceHarvester' &&
+				(creep.memory?.target ?? creep.target) === target,
+		);
+		const deficit =
+			snapshot.policy.minLongDistanceHarvesters[target] -
+			active -
+			spawning;
+		for (let index = 0; index < deficit; index++) {
+			addDemand(queue, {
+				key: `longDistanceHarvester-${target}-${index}`,
+				role: 'longDistanceHarvester',
+				priority: spawnPriority.routine - 1,
+				minEnergy: 250,
+				desiredEnergy: snapshot.energy.capacity,
+				affordability: affordabilityPolicy.wait,
+				home: snapshot.roomName,
+				target,
+				sourceIndex: 0,
+			});
+		}
+	}
+}
+
+/**
+ * Express room demand without considering currently available spawn energy.
+ */
+StructureSpawn.prototype.buildSpawnQueue = function (
+	snapshot = this.createSpawnRoomSnapshot(),
+) {
+	const queue = [];
+	if (!addRecoveryDemand(snapshot, queue)) {
+		addDefenceDemand(snapshot, queue);
+		addMinerDemand(snapshot, queue);
+		addClaimDemand(snapshot, queue);
+		addConfiguredRoleDemand(snapshot, queue, this);
+		addRemoteDemand(snapshot, queue);
+	}
+	return queue.sort(
+		(left, right) =>
+			right.priority - left.priority || left.sequence - right.sequence,
+	);
+};
+
+function affordableEnergy(request, availableEnergy) {
+	if (availableEnergy >= request.desiredEnergy) {
+		return request.desiredEnergy;
+	}
+	if (
+		request.affordability !== affordabilityPolicy.downsize ||
+		availableEnergy < request.minEnergy
+	) {
+		return undefined;
+	}
+	const step = request.energyStep ?? 1;
+	return (
+		request.minEnergy +
+		Math.floor((availableEnergy - request.minEnergy) / step) * step
+	);
+}
+
+StructureSpawn.prototype.executeSpawnRequest = function (request, energy) {
+	if (request.role === 'miner') {
+		return this.createMiner(request.sourceId);
+	}
+	if (request.role === 'lorry') {
+		return this.createLorry(energy);
+	}
+	if (request.role === 'claimer') {
+		return this.createClaimer(request.target, 'claim');
+	}
+	if (request.role === 'carlDouglas') {
+		return this.spawnCarlDouglas(energy);
+	}
+	if (request.role === 'longDistanceHarvester') {
+		return this.createLongDistanceHarvester(
+			energy,
+			2,
+			request.home,
+			request.target,
+			request.sourceIndex,
+		);
+	}
+	return this.createCustomCreep(energy, request.role);
+};
+
+StructureSpawn.prototype.getSpawnSchedule = function () {
+	const existing = roomSpawnSchedules.get(this.room);
+	if (existing?.tick === Game.time) {
+		return existing;
+	}
+	const snapshot = this.createSpawnRoomSnapshot();
+	const schedule = {
+		tick: Game.time,
+		snapshot,
+		queue: this.buildSpawnQueue(snapshot),
+	};
+	roomSpawnSchedules.set(this.room, schedule);
+	return schedule;
+};
+
+function createUniqueCreepName(roleName, spawnName) {
+	const baseName = roleName + Game.time;
+	const memoryCreeps =
+		typeof Memory === 'undefined' ? undefined : Memory.creeps;
+	if (!Game.creeps[baseName] && !memoryCreeps?.[baseName]) {
+		return baseName;
+	}
+	return `${baseName}-${spawnName}`;
+}
+
+/**
+ * Let every spawn cooperate through one room-scoped schedule.
+ */
+StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
+	if (!this.my) {
+		return;
+	}
+	const schedule = this.getSpawnSchedule();
+	this.memory.spawnQueue = schedule.queue;
+	if (this.spawning) {
 		return;
 	}
 
-	// if none of others caused a spawn check for other required roles
-	if (name === undefined) {
-		for (const role of listOfRoles) {
-			if (role === 'harvester') {
+	for (let index = 0; index < schedule.queue.length; index++) {
+		const request = schedule.queue[index];
+		const energy = affordableEnergy(
+			request,
+			schedule.snapshot.energy.available,
+		);
+		if (energy === undefined) {
+			if (request.affordability === affordabilityPolicy.skip) {
 				continue;
 			}
-			if (role === 'carlDouglas' && hasHostiles) {
-				const existingCarlCount = numberOfCreeps[role] ?? 0;
-				const partsPerGroup = 6;
-				const maxGroups = Math.floor(MAX_CREEP_SIZE / partsPerGroup);
-				const groups = Math.min(existingCarlCount + 1, maxGroups);
-				const energyPerGroup =
-					BODYPART_COST[TOUGH] +
-					BODYPART_COST[HEAL] +
-					BODYPART_COST[RANGED_ATTACK] +
-					3 * BODYPART_COST[MOVE];
-				const energyBudget = energyPerGroup * groups;
-				if (currentEnergy >= energyBudget) {
-					const attempt = this.spawnCarlDouglas(energyBudget);
-
-					if (attempt.result === OK) {
-						name = attempt.name;
-						break;
-					}
-				}
-			}
-			// check if any orders to claim a new room
-			if (role === 'claimer' && this.memory.claimRoom !== undefined) {
-				// check available energy and try to spawn claimer
-				const claimerRoleCost =
-					BODYPART_COST[CLAIM] + BODYPART_COST[MOVE];
-				if (!hasAvailableClaimSlot || currentEnergy < claimerRoleCost) {
-					continue;
-				}
-
-				const attempt = this.createClaimer(
-					this.memory.claimRoom,
-					'claim',
-				);
-
-				if (attempt.result === OK) {
-					name = attempt.name;
-					//TODO What happens if the spawn stops existing before this was spawned?
-					// May need a state machine pending → spawning → travelling → claimed
-					delete this.memory.claimRoom;
-					break;
-				}
-
-				return;
-			}
-			// if no claim order continue checking roles
-			if (numberOfCreeps[role] < this.memory.minCreeps[role]) {
-				if (role === 'lorry') {
-					const lorryCost =
-						BODYPART_COST[CARRY] * 2 + BODYPART_COST[MOVE];
-					if (currentEnergy < lorryCost) {
-						continue;
-					}
-
-					const attempt = this.createLorry(currentEnergy);
-
-					if (attempt.result === OK) {
-						name = attempt.name;
-						break;
-					}
-
-					return;
-				}
-				if (currentEnergy === maxEnergy) {
-					if (role === 'builder' && !hasConstructionSites) {
-						continue;
-					}
-					if (role === 'repairer' && !needsRepairs) {
-						continue;
-					}
-					if (role === 'wallRepairer' && !needsWallRepairs) {
-						continue;
-					}
-					if (role === 'extractor' && !canSpawnExtractor) {
-						continue;
-					}
-					if (role === 'carlDouglas' && !hasHostiles) {
-						continue;
-					}
-
-					const attempt = this.createCustomCreep(maxEnergy, role);
-					if (attempt.result === OK) {
-						name = attempt.name;
-						break;
-					}
-
-					if (attempt.result === ERR_BUSY) {
-						return;
-					}
-				}
-			}
+			return;
 		}
-	}
-
-	// if none of the above caused a spawn command check for LongDistanceHarvesters
-	const numberOfLongDistanceHarvesters = {};
-	if (name === undefined) {
-		// count global number of harvesters
-		for (const roomName in this.memory.minLongDistanceHarvesters) {
-			numberOfLongDistanceHarvesters[roomName] = _.sum(
-				Game.creeps,
-				(c) =>
-					c.memory.role === 'longDistanceHarvester' &&
-					c.memory.target === roomName,
-			);
-
-			if (
-				numberOfLongDistanceHarvesters[roomName] <
-					this.memory.minLongDistanceHarvesters[roomName] &&
-				currentEnergy === maxEnergy
-			) {
-				const attempt = this.createLongDistanceHarvester(
-					maxEnergy,
-					2,
-					room.name,
-					roomName,
-					0,
-				);
-
-				if (attempt.result === OK) {
-					name = attempt.name;
-					break;
-				}
-
-				if (
-					attempt.result === ERR_BUSY ||
-					attempt.result === ERR_INVALID_ARGS ||
-					attempt.result === ERR_NOT_ENOUGH_ENERGY
-				) {
-					console.log(attempt.result);
-					return;
-				}
+		const attempt = this.executeSpawnRequest(request, energy);
+		if (attempt.result === OK) {
+			schedule.queue.splice(index, 1);
+			schedule.snapshot.energy.available = this.room.energyAvailable;
+			this.memory.spawnQueue = schedule.queue;
+			if (request.role === 'claimer') {
+				delete schedule.snapshot.policy.claimRoom;
 			}
+			console.log(`${this.name} spawned new creep: ${attempt.name}`);
+			return;
 		}
-	}
-	// if spawning was a success print name to console
-	if (name !== undefined && _.isString(name)) {
-		console.log(`${this.name} spawned new creep: ${name}`);
-		for (const role of listOfRoles) {
-			console.log(`${role}: ${numberOfCreeps[role]}`);
-		}
-		for (const roomName in numberOfLongDistanceHarvesters) {
-			console.log(
-				`LongDistanceHarvester ${roomName}: ${numberOfLongDistanceHarvesters[roomName]}`,
-			);
+		if (attempt.result === ERR_BUSY) {
+			return;
 		}
 	}
 };
@@ -353,7 +486,7 @@ StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
 
 	// create a creep with created body part for the given role
 	const creepMemory = { memory: { role: roleName, working: false } };
-	const name = roleName + Game.time;
+	const name = createUniqueCreepName(roleName, this.name);
 
 	return {
 		name: name,
@@ -438,7 +571,7 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 			working: false,
 		},
 	};
-	const name = 'longDistanceHarvester' + Game.time;
+	const name = createUniqueCreepName('longDistanceHarvester', this.name);
 
 	return {
 		name: name,
@@ -460,7 +593,7 @@ StructureSpawn.prototype.createClaimer = function (target, action) {
 	const creepMemory = {
 		memory: { role: 'claimer', target: target, controllerAction: action },
 	};
-	const name = 'claimer' + Game.time;
+	const name = createUniqueCreepName('claimer', this.name);
 	const body = [CLAIM, MOVE];
 
 	return {
@@ -476,7 +609,7 @@ StructureSpawn.prototype.createClaimer = function (target, action) {
 StructureSpawn.prototype.createMiner = function (sourceId) {
 	// accept sourceId that requires miner. Miners five work parts will empty a source in the refresh time frame
 	const creepMemory = { memory: { role: 'miner', sourceId: sourceId } };
-	const name = 'miner' + Game.time;
+	const name = createUniqueCreepName('miner', this.name);
 	const body = [WORK, WORK, WORK, WORK, WORK, MOVE];
 
 	return {
@@ -511,7 +644,7 @@ StructureSpawn.prototype.createLorry = function (energy) {
 			working: false,
 		},
 	};
-	const name = 'lorry' + Game.time;
+	const name = createUniqueCreepName('lorry', this.name);
 
 	return {
 		name: name,
@@ -569,7 +702,7 @@ StructureSpawn.prototype.spawnCarlDouglas = function (energy) {
 			role: roleName,
 		},
 	};
-	const name = roleName + Game.time;
+	const name = createUniqueCreepName(roleName, this.name);
 
 	return {
 		name: name,

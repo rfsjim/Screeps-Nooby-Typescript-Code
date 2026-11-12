@@ -114,6 +114,7 @@ function installScreepsGlobals() {
 
 function createMockRoom({
 	creeps = [],
+	hostiles = [],
 	sources = [],
 	structures = [],
 	constructionSites = [],
@@ -136,6 +137,7 @@ function createMockRoom({
 
 	return {
 		name: 'W1N1',
+		memory: {},
 		energyAvailable: energy,
 		energyCapacityAvailable: energyCapacity,
 		controller,
@@ -148,6 +150,9 @@ function createMockRoom({
 			}
 			if (type === FIND_SOURCES) {
 				results = sources;
+			}
+			if (type === FIND_HOSTILE_CREEPS) {
+				results = hostiles;
 			}
 			if (type === FIND_STRUCTURES) {
 				results = structures;

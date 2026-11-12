@@ -163,3 +163,97 @@ test('phase checks use elapsed ticks rather than absolute game time', () => {
 	assert.equal(init.determineCurrentPhaseNumber(room), 2);
 	assert.equal(room.memory.lastChecked, 2001);
 });
+
+test('spawn policy preserves legacy overrides and updates staffing across phases', () => {
+	const room = createPhaseOneRoom();
+	room.controller = { my: true };
+	const spawn = {
+		name: 'Spawn1',
+		room,
+		memory: {
+			minCreeps: { upgrader: 2 },
+			minLongDistanceHarvesters: { W2N2: 2 },
+			claimRoom: 'W3N3',
+		},
+	};
+	global.Game = {
+		time: 0,
+		rooms: { W1N1: room },
+		spawns: { Spawn1: spawn },
+		gcl: { level: 1 },
+	};
+	global.Memory = {
+		rooms: { W1N1: room.memory },
+		spawns: { Spawn1: spawn.memory },
+	};
+
+	init.initGame();
+
+	assert.equal(room.memory.spawnPolicy.phase, 1);
+	assert.equal(room.memory.spawnPolicy.minCreeps.upgrader, 2);
+	assert.equal(room.memory.spawnPolicy.minCreeps.builder, 4);
+	assert.deepEqual(room.memory.spawnPolicy.minLongDistanceHarvesters, {
+		W2N2: 2,
+	});
+	assert.equal(room.memory.spawnPolicy.claimRoom, 'W3N3');
+	assert.equal(room.memory.spawnPolicy.migrationComplete, true);
+	assert.equal(Object.hasOwn(spawn.memory, 'minCreeps'), false);
+
+	Game.time = 1001;
+	assert.equal(init.determineCurrentPhaseNumber(room), 2);
+	init.initGame();
+
+	assert.equal(room.memory.spawnPolicy.phase, 2);
+	assert.equal(room.memory.spawnPolicy.minCreeps.upgrader, 3);
+	assert.equal(room.memory.spawnPolicy.minCreeps.builder, 1);
+	assert.equal(room.memory.spawnPolicy.minCreeps.repairer, 1);
+	assert.deepEqual(room.memory.spawnPolicy.minLongDistanceHarvesters, {
+		W2N2: 2,
+	});
+	assert.equal(room.memory.spawnPolicy.claimRoom, 'W3N3');
+});
+
+test('spawn policy stores the effective phase when the raw phase is undefined', () => {
+	const room = createPhaseOneRoom({ phase: 4 });
+	room.controller = { my: true };
+	global.Game = {
+		time: 0,
+		rooms: { W1N1: room },
+		spawns: {},
+		gcl: { level: 1 },
+	};
+	global.Memory = {
+		rooms: { W1N1: room.memory },
+		spawns: {},
+	};
+
+	init.initGame();
+
+	assert.equal(room.memory.phase, 4);
+	assert.equal(room.memory.spawnPolicy.phase, 3);
+	assert.equal(room.memory.spawnPolicy.minCreeps.upgrader, 2);
+	assert.equal(room.memory.spawnPolicy.minCreeps.wallRepairer, 1);
+});
+
+test('spawn policy initialisation is idempotent within the same phase', () => {
+	const room = createPhaseOneRoom();
+	room.controller = { my: true };
+	global.Game = {
+		time: 0,
+		rooms: { W1N1: room },
+		spawns: {},
+		gcl: { level: 1 },
+	};
+	global.Memory = {
+		rooms: { W1N1: room.memory },
+		spawns: {},
+	};
+
+	init.initGame();
+	room.memory.spawnPolicy.minCreeps.upgrader = 9;
+
+	init.initGame();
+
+	assert.equal(room.memory.spawnPolicy.phase, 1);
+	assert.equal(room.memory.spawnPolicy.minCreeps.upgrader, 9);
+});

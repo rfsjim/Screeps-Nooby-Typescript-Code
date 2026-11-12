@@ -31,7 +31,9 @@ function createSpawnScenario({
 	spawn.my = true;
 	spawn.spawning = null;
 	spawn.room = room;
-	spawn.memory = {
+	room.memory.spawnPolicy ??= {
+		phase: room.memory.phase ?? 1,
+		migrationComplete: true,
 		minCreeps: {
 			harvester: 0,
 			lorry: 0,
@@ -46,6 +48,7 @@ function createSpawnScenario({
 		},
 		minLongDistanceHarvesters: {},
 	};
+	spawn.memory = {};
 	spawn.spawnCreep = (body, name, options) => {
 		spawnAttempts.push({
 			body,
@@ -53,7 +56,15 @@ function createSpawnScenario({
 			memory: options.memory,
 			role: options.memory.role,
 		});
-		return spawnResults[options.memory.role] ?? OK;
+		const result = spawnResults[options.memory.role] ?? OK;
+		if (result === OK) {
+			Memory.creeps[name] = options.memory;
+			room.energyAvailable -= body.reduce(
+				(total, part) => total + BODYPART_COST[part],
+				0,
+			);
+		}
+		return result;
 	};
 	global.Game = {
 		creeps: {},
@@ -66,6 +77,7 @@ function createSpawnScenario({
 		time: 42,
 		...game,
 	};
+	global.Memory = { creeps: {} };
 
 	return { spawn, spawnAttempts };
 }
@@ -122,6 +134,220 @@ function createGrowingRoomScenario({
 	});
 }
 
+test('the queue places hostile defence ahead of a missing source miner', () => {
+	const source = createSource();
+	const room = createMockRoom({
+		creeps: [
+			{ memory: { role: 'harvester' } },
+			{ memory: { role: 'lorry' } },
+		],
+		hostiles: [{}],
+		sources: [source],
+		structures: [createSourceContainer()],
+		energy: 600,
+	});
+	const { spawn, spawnAttempts } = createSpawnScenario({ room });
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.equal(spawnAttempts[0].role, 'carlDouglas');
+	assert.equal(spawn.memory.spawnQueue[0].role, 'miner');
+});
+
+test('an emergency request overrides an existing routine queue', () => {
+	const room = createMockRoom({
+		creeps: [
+			{ memory: { role: 'harvester' } },
+			{ memory: { role: 'lorry' } },
+		],
+		hostiles: [{}],
+		energy: 600,
+	});
+	const { spawn, spawnAttempts } = createSpawnScenario({ room });
+	spawn.memory.spawnQueue = [
+		{ key: 'role-upgrader', role: 'upgrader', priority: 100, energy: 600 },
+	];
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.equal(spawnAttempts[0].role, 'carlDouglas');
+});
+
+test('the queue is refreshed while the spawn is busy', () => {
+	const room = createMockRoom({
+		creeps: [
+			{ memory: { role: 'harvester' } },
+			{ memory: { role: 'lorry' } },
+		],
+		hostiles: [{}],
+		energy: 600,
+	});
+	const { spawn, spawnAttempts } = createSpawnScenario({ room });
+	spawn.spawning = { name: 'upgrader41' };
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.equal(spawn.memory.spawnQueue[0].role, 'carlDouglas');
+	assert.deepEqual(spawnAttempts, []);
+});
+
+test('demand is reported independently of current affordability', () => {
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		energy: 100,
+		energyCapacity: 600,
+		minCreeps: { upgrader: 1 },
+	});
+
+	const queue = spawn.buildSpawnQueue(spawn.createSpawnRoomSnapshot());
+	const upgrader = queue.find((request) => request.role === 'upgrader');
+
+	assert.equal(upgrader.minEnergy, 200);
+	assert.equal(upgrader.desiredEnergy, 600);
+	assert.equal(upgrader.affordability, 'wait');
+	spawn.spawnCreepsIfNecessary();
+	assert.deepEqual(spawnAttempts, []);
+});
+
+test('two room spawns share one snapshot and consume different requests', () => {
+	const findCounts = {};
+	const room = createMockRoom({
+		creeps: [
+			{ memory: { role: 'harvester' } },
+			{ memory: { role: 'lorry' } },
+		],
+		sources: [createSource('source-1'), createSource('source-2')],
+		structures: [
+			createSourceContainer({ adjacentToSourceId: 'source-1' }),
+			createSourceContainer({ adjacentToSourceId: 'source-2' }),
+		],
+		energy: 1200,
+	});
+	const find = room.find.bind(room);
+	room.find = (type, options) => {
+		findCounts[type] = (findCounts[type] ?? 0) + 1;
+		return find(type, options);
+	};
+	const first = createSpawnScenario({ room });
+	const secondSpawn = new StructureSpawn();
+	secondSpawn.name = 'Spawn2';
+	secondSpawn.my = true;
+	secondSpawn.spawning = null;
+	secondSpawn.room = room;
+	secondSpawn.memory = {};
+	const secondAttempts = [];
+	secondSpawn.spawnCreep = (body, name, options) => {
+		secondAttempts.push({ body, name, memory: options.memory });
+		Memory.creeps[name] = options.memory;
+		room.energyAvailable -= body.reduce(
+			(total, part) => total + BODYPART_COST[part],
+			0,
+		);
+		return OK;
+	};
+	Game.spawns = { Spawn1: first.spawn, Spawn2: secondSpawn };
+
+	first.spawn.spawnCreepsIfNecessary();
+	secondSpawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(
+		[
+			first.spawnAttempts[0].memory.sourceId,
+			secondAttempts[0].memory.sourceId,
+		],
+		['source-1', 'source-2'],
+	);
+	assert.equal(first.spawnAttempts[0].name, 'miner42');
+	assert.equal(secondAttempts[0].name, 'miner42-Spawn2');
+	assert.notEqual(first.spawnAttempts[0].name, secondAttempts[0].name);
+	assert.equal(findCounts[FIND_MY_CREEPS], 1);
+	assert.equal(findCounts[FIND_SOURCES], 1);
+	assert.equal(findCounts[FIND_STRUCTURES], 1);
+	assert.equal(findCounts[FIND_HOSTILE_CREEPS], 1);
+	assert.equal(first.spawn.getSpawnSchedule().snapshot.energy.available, 100);
+	assert.equal(room.energyAvailable, 100);
+});
+
+test('a miner already spawning satisfies its assigned source demand', () => {
+	const room = createMockRoom({
+		creeps: [
+			{ memory: { role: 'harvester' } },
+			{ memory: { role: 'lorry' } },
+		],
+		sources: [createSource('source-1')],
+		structures: [createSourceContainer({ adjacentToSourceId: 'source-1' })],
+		energy: 600,
+	});
+	const { spawn, spawnAttempts } = createSpawnScenario({ room });
+	spawn.spawning = { name: 'miner41' };
+	global.Memory = {
+		creeps: { miner41: { role: 'miner', sourceId: 'source-1' } },
+	};
+	Game.spawns = { Spawn1: spawn };
+
+	spawn.spawnCreepsIfNecessary();
+
+	const snapshot = spawn.getSpawnSchedule().snapshot;
+	assert.equal(snapshot.operationalPopulation.miner, 0);
+	assert.equal(snapshot.committedPopulation.miner, 1);
+	assert.equal(
+		spawn.memory.spawnQueue.some((request) => request.role === 'miner'),
+		false,
+	);
+	assert.deepEqual(spawnAttempts, []);
+});
+
+test('room policy is authoritative when spawn population targets disagree', () => {
+	const room = createMockRoom({
+		creeps: createProductiveCreeps(),
+		energy: 600,
+	});
+	room.memory.spawnPolicy = {
+		minCreeps: { upgrader: 1 },
+		minLongDistanceHarvesters: {},
+	};
+	const { spawn } = createSpawnScenario({ room, minCreeps: { upgrader: 0 } });
+	const otherSpawn = new StructureSpawn();
+	otherSpawn.name = 'Spawn2';
+	otherSpawn.my = true;
+	otherSpawn.room = room;
+	otherSpawn.memory = {
+		minCreeps: { upgrader: 3 },
+		minLongDistanceHarvesters: {},
+	};
+	Game.spawns = { Spawn1: spawn, Spawn2: otherSpawn };
+
+	const queue = spawn.buildSpawnQueue(spawn.createSpawnRoomSnapshot());
+
+	assert.equal(
+		queue.filter((request) => request.role === 'upgrader').length,
+		1,
+	);
+});
+
+test('remote harvester demand preserves source index zero', () => {
+	const room = createMockRoom({
+		creeps: createProductiveCreeps(),
+		energy: 600,
+	});
+	room.memory.spawnPolicy = {
+		minCreeps: {},
+		minLongDistanceHarvesters: { W2N2: 2 },
+	};
+	const { spawn } = createSpawnScenario({ room });
+
+	const queue = spawn.buildSpawnQueue(spawn.createSpawnRoomSnapshot());
+	const remoteRequests = queue.filter(
+		(request) => request.role === 'longDistanceHarvester',
+	);
+
+	assert.equal(remoteRequests.length, 2);
+	assert.deepEqual(
+		remoteRequests.map((request) => request.sourceIndex),
+		[0, 0],
+	);
+});
+
 const recoveryCases = [
 	{
 		name: 'no creeps with 200 spawn energy and no reserves spawns a harvester',
@@ -143,6 +369,12 @@ const recoveryCases = [
 		name: 'no transport with 100 spawn energy and 1,000 container energy waits',
 		energy: 100,
 		containerEnergy: 1000,
+		expectedRoles: [],
+	},
+	{
+		name: 'stored energy below the recovery threshold does not prioritise a lorry',
+		energy: 150,
+		containerEnergy: 100,
 		expectedRoles: [],
 	},
 	{
@@ -172,7 +404,7 @@ test('a miner with recoverable container energy spawns a lorry before priority t
 		containerEnergy: 1000,
 		creeps: [{ memory: { role: 'miner' } }],
 	});
-	spawn.memory.minCreeps.upgrader = 1;
+	spawn.room.memory.spawnPolicy.minCreeps.upgrader = 1;
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -221,7 +453,7 @@ test('a miner and lorry exit the recovery gate', () => {
 		energy: 300,
 		creeps: [{ memory: { role: 'miner' } }, { memory: { role: 'lorry' } }],
 	});
-	spawn.memory.minCreeps.upgrader = 1;
+	spawn.room.memory.spawnPolicy.minCreeps.upgrader = 1;
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -562,7 +794,7 @@ test('a claimer does not spawn when all GCL claim slots are used', () => {
 		},
 	});
 
-	spawn.memory.claimRoom = 'W2N2';
+	spawn.room.memory.spawnPolicy.claimRoom = 'W2N2';
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -587,7 +819,7 @@ test('a claimer spawns when GCL has an available claim slot', () => {
 		},
 	});
 
-	spawn.memory.claimRoom = 'W2N2';
+	spawn.room.memory.spawnPolicy.claimRoom = 'W2N2';
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -598,7 +830,7 @@ test('a claimer spawns when GCL has an available claim slot', () => {
 	);
 
 	assert.equal(
-		Object.hasOwn(spawn.memory, 'claimRoom'),
+		Object.hasOwn(spawn.room.memory.spawnPolicy, 'claimRoom'),
 		false,
 		'a successful claimer spawn should remove the claim order',
 	);
@@ -643,7 +875,7 @@ test('a claimer does not spawn without sufficient energy GCL has an available cl
 		},
 	});
 
-	spawn.memory.claimRoom = 'W2N2';
+	spawn.room.memory.spawnPolicy.claimRoom = 'W2N2';
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -654,13 +886,13 @@ test('a claimer does not spawn without sufficient energy GCL has an available cl
 	);
 
 	assert.equal(
-		Object.hasOwn(spawn.memory, 'claimRoom'),
+		Object.hasOwn(spawn.room.memory.spawnPolicy, 'claimRoom'),
 		true,
 		'an unsuccessful claimer spawn should retain the claim order',
 	);
 
 	assert.equal(
-		spawn.memory.claimRoom,
+		spawn.room.memory.spawnPolicy.claimRoom,
 		'W2N2',
 		'an unsuccessful claimer spawn should retain the original claim order',
 	);
@@ -674,7 +906,7 @@ test('a busy claimer spawn attempt retains the claimer order', () => {
 		spawnResults: { claimer: ERR_BUSY },
 	});
 
-	spawn.memory.claimRoom = 'W2N2';
+	spawn.room.memory.spawnPolicy.claimRoom = 'W2N2';
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -684,13 +916,13 @@ test('a busy claimer spawn attempt retains the claimer order', () => {
 	);
 
 	assert.equal(
-		Object.hasOwn(spawn.memory, 'claimRoom'),
+		Object.hasOwn(spawn.room.memory.spawnPolicy, 'claimRoom'),
 		true,
 		'an unsuccessful claimer spawn should retain the claim order',
 	);
 
 	assert.equal(
-		spawn.memory.claimRoom,
+		spawn.room.memory.spawnPolicy.claimRoom,
 		'W2N2',
 		'an unsuccessful claimer spawn should retain the original claim order',
 	);
@@ -705,7 +937,7 @@ test('an error in claimer spawn attempt retains the claimer order', () => {
 		spawnResults: { claimer: ERR_NOT_ENOUGH_ENERGY },
 	});
 
-	spawn.memory.claimRoom = 'W2N2';
+	spawn.room.memory.spawnPolicy.claimRoom = 'W2N2';
 
 	spawn.spawnCreepsIfNecessary();
 
@@ -715,13 +947,13 @@ test('an error in claimer spawn attempt retains the claimer order', () => {
 	);
 
 	assert.equal(
-		Object.hasOwn(spawn.memory, 'claimRoom'),
+		Object.hasOwn(spawn.room.memory.spawnPolicy, 'claimRoom'),
 		true,
 		'an unsuccessful claimer spawn should retain the claim order',
 	);
 
 	assert.equal(
-		spawn.memory.claimRoom,
+		spawn.room.memory.spawnPolicy.claimRoom,
 		'W2N2',
 		'an unsuccessful claimer spawn should retain the original claim order',
 	);

@@ -169,6 +169,70 @@ const init = {
 	EXIT_NAME: EXIT_NAME,
 	EXITS: [FIND_EXIT_TOP, FIND_EXIT_RIGHT, FIND_EXIT_BOTTOM, FIND_EXIT_LEFT],
 
+	getPhaseSpawnTargets: function (room, phase) {
+		return {
+			lorry: room.find(FIND_SOURCES).length || 0,
+			claimer: phase.Claimer.count,
+			upgrader: phase.Upgrader.count,
+			repairer: phase.Repairer.count,
+			builder: phase.Builder.count,
+			wallRepairer: phase.WallRepairer.count,
+			extractor: phase.RoleExtractor.count,
+		};
+	},
+
+	ensureRoomSpawnPolicy: function (room) {
+		const phaseNumber = this.getEffectivePhaseNumber(room);
+		const phase = Phases[phaseNumber];
+		const phaseTargets = this.getPhaseSpawnTargets(room, phase);
+		const existingPolicy = room.memory.spawnPolicy;
+		const policy = existingPolicy ?? {
+			phase: phaseNumber,
+			minCreeps: phaseTargets,
+			minLongDistanceHarvesters: {},
+		};
+		policy.minCreeps ??= {};
+		policy.minLongDistanceHarvesters ??= {};
+
+		if (!policy.migrationComplete) {
+			const migratedMinCreeps = {};
+			const legacySpawns = Object.values(Game.spawns)
+				.filter((spawn) => spawn.room.name === room.name)
+				.sort((left, right) => left.name.localeCompare(right.name));
+			for (const spawn of legacySpawns) {
+				for (const role in spawn.memory.minCreeps ?? {}) {
+					// If there is a conflict in requested creeps use the larger number.
+					// If two spawns both request two creep roles request two, dont sum them together
+					migratedMinCreeps[role] = Math.max(
+						migratedMinCreeps[role] ?? 0,
+						spawn.memory.minCreeps[role],
+					);
+				}
+				for (const target in spawn.memory.minLongDistanceHarvesters ??
+					{}) {
+					policy.minLongDistanceHarvesters[target] = Math.max(
+						policy.minLongDistanceHarvesters[target] ?? 0,
+						spawn.memory.minLongDistanceHarvesters[target],
+					);
+				}
+				policy.claimRoom ??= spawn.memory.claimRoom;
+				delete spawn.memory.minCreeps;
+				delete spawn.memory.minLongDistanceHarvesters;
+				delete spawn.memory.claimRoom;
+			}
+			Object.assign(policy.minCreeps, migratedMinCreeps);
+			policy.migrationComplete = true;
+			policy.phase ??= phaseNumber;
+		}
+
+		if (policy.phase !== phaseNumber) {
+			policy.minCreeps = { ...policy.minCreeps, ...phaseTargets };
+			policy.phase = phaseNumber;
+		}
+		room.memory.spawnPolicy = policy;
+		return policy;
+	},
+
 	/**
 	 * Get Initial Room Data
 	 * @param {string} roomName
@@ -218,6 +282,15 @@ const init = {
 	 * @returns
 	 */
 	getCurrentPhaseInfo: function (room) {
+		return Phases[this.getEffectivePhaseNumber(room)];
+	},
+
+	/**
+	 * Resolve the raw room phase to the latest phase definition that exists.
+	 * @param {Room} room
+	 * @returns {number}
+	 */
+	getEffectivePhaseNumber: function (room) {
 		let number = this.getCurrentPhaseNumber(room);
 		while (!Phases[number]) {
 			number--;
@@ -225,7 +298,7 @@ const init = {
 				throw new Error('Phases do not exist');
 			}
 		}
-		return Phases[number];
+		return number;
 	},
 
 	/**
@@ -291,34 +364,16 @@ const init = {
 			if (!Memory.rooms[roomName]) {
 				Memory.rooms[roomName] = this.getInitialData(roomName);
 			}
+			const room = Game.rooms[roomName];
+
+			if (room.controller?.my) {
+				this.ensureRoomSpawnPolicy(Game.rooms[roomName]);
+			}
 		}
 
 		for (const spawnName in Game.spawns) {
 			if (!Memory.spawns[spawnName]) {
-				const phase = this.getCurrentPhaseInfo(
-					Game.spawns[spawnName].room,
-				);
-
 				Memory.spawns[spawnName] = {};
-
-				if (!Memory.spawns[spawnName].minCreeps) {
-					Memory.spawns[spawnName].minCreeps = {};
-					Memory.spawns[spawnName].minCreeps.lorry =
-						Game.spawns[spawnName].room.find(FIND_SOURCES).length ||
-						0;
-					Memory.spawns[spawnName].minCreeps.claimer =
-						phase.Claimer.count;
-					Memory.spawns[spawnName].minCreeps.upgrader =
-						phase.Upgrader.count;
-					Memory.spawns[spawnName].minCreeps.repairer =
-						phase.Repairer.count;
-					Memory.spawns[spawnName].minCreeps.builder =
-						phase.Builder.count;
-					Memory.spawns[spawnName].minCreeps.wallRepairer =
-						phase.WallRepairer.count;
-					Memory.spawns[spawnName].minCreeps.roleExtractor =
-						phase.RoleExtractor.count;
-				}
 			}
 		}
 	},
