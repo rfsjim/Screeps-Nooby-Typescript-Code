@@ -20,12 +20,15 @@ function createSource(id, x, y) {
 }
 
 function createInitRoomScenario({
+	mineralMemory,
+	minerals = [],
 	sources = [createSource('source-1', 25, 25)],
 	walls = [],
 	structuresByPosition = {},
 	constructionSitesByPosition = {},
 } = {}) {
 	const wallPositions = new Set(walls.map(([x, y]) => positionKey(x, y)));
+	const findCalls = [];
 
 	global.RoomPosition = class RoomPosition {
 		constructor(x, y, roomName) {
@@ -48,9 +51,16 @@ function createInitRoomScenario({
 
 	const room = {
 		name: 'W1N1',
-		memory: {},
+		memory: { mineral: mineralMemory },
 		find(type) {
-			return type === FIND_SOURCES ? sources : [];
+			findCalls.push(type);
+			if (type === FIND_SOURCES) {
+				return sources;
+			}
+			if (type === FIND_MINERALS) {
+				return minerals;
+			}
+			return [];
 		},
 		getTerrain() {
 			return {
@@ -63,7 +73,7 @@ function createInitRoomScenario({
 		},
 	};
 
-	return new InitRoom(room);
+	return { findCalls, initRoom: new InitRoom(room), room };
 }
 
 function candidateCoordinates(candidates) {
@@ -71,7 +81,7 @@ function candidateCoordinates(candidates) {
 }
 
 test('a source with eight empty adjacent tiles has eight candidates', () => {
-	const initRoom = createInitRoomScenario();
+	const { initRoom } = createInitRoomScenario();
 
 	const candidates = initRoom.ensureContainers();
 
@@ -79,7 +89,7 @@ test('a source with eight empty adjacent tiles has eight candidates', () => {
 });
 
 test('a source with walls on three adjacent tiles has five candidates', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		walls: [
 			[24, 24],
 			[25, 24],
@@ -93,7 +103,7 @@ test('a source with walls on three adjacent tiles has five candidates', () => {
 });
 
 test('a source with an adjacent container is omitted', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		structuresByPosition: {
 			[positionKey(24, 25)]: [{ structureType: STRUCTURE_CONTAINER }],
 		},
@@ -105,7 +115,7 @@ test('a source with an adjacent container is omitted', () => {
 });
 
 test('a source with an adjacent container construction site is omitted', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		constructionSitesByPosition: {
 			[positionKey(24, 25)]: [{ structureType: STRUCTURE_CONTAINER }],
 		},
@@ -118,7 +128,7 @@ test('a source with an adjacent container construction site is omitted', () => {
 
 test('an adjacent extension tile is excluded from source candidates', () => {
 	const extensionPosition = positionKey(24, 25);
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		structuresByPosition: {
 			[extensionPosition]: [{ structureType: STRUCTURE_EXTENSION }],
 		},
@@ -132,7 +142,7 @@ test('an adjacent extension tile is excluded from source candidates', () => {
 });
 
 test('two sources requiring containers have independent map entries', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		sources: [
 			createSource('source-1', 10, 10),
 			createSource('source-2', 30, 30),
@@ -151,7 +161,7 @@ test('two sources requiring containers have independent map entries', () => {
 });
 
 test('a source with no available adjacent tiles has an empty entry', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		walls: [
 			[24, 24],
 			[25, 24],
@@ -171,7 +181,7 @@ test('a source with no available adjacent tiles has an empty entry', () => {
 });
 
 test('container site is detected alongside another structure', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		structuresByPosition: {
 			[positionKey(24, 25)]: [{ structureType: STRUCTURE_ROAD }],
 		},
@@ -186,7 +196,7 @@ test('container site is detected alongside another structure', () => {
 });
 
 test('a source with an adjacent container construction site at the end of the loop is omitted', () => {
-	const initRoom = createInitRoomScenario({
+	const { initRoom } = createInitRoomScenario({
 		constructionSitesByPosition: {
 			[positionKey(26, 26)]: [{ structureType: STRUCTURE_CONTAINER }],
 		},
@@ -195,4 +205,50 @@ test('a source with an adjacent container construction site at the end of the lo
 	const candidates = initRoom.ensureContainers();
 
 	assert.equal(candidates.has('source-1'), false);
+});
+
+test('mineral metadata is saved to room memory', () => {
+	const mineral = {
+		id: 'mineral-1',
+		mineralType: RESOURCE_HYDROGEN,
+		density: 3,
+		pos: { x: 17, y: 29 },
+	};
+	const { initRoom, room } = createInitRoomScenario({ minerals: [mineral] });
+
+	initRoom.storeMineral();
+
+	assert.deepEqual(room.memory.mineral, {
+		id: 'mineral-1',
+		mineralType: RESOURCE_HYDROGEN,
+		density: 3,
+		x: 17,
+		y: 29,
+	});
+});
+
+test('existing mineral memory is preserved without searching the room again', () => {
+	const existingMineral = {
+		id: 'known-mineral',
+		mineralType: RESOURCE_OXYGEN,
+		density: 2,
+		x: 10,
+		y: 20,
+	};
+	const { findCalls, initRoom, room } = createInitRoomScenario({
+		mineralMemory: existingMineral,
+	});
+
+	initRoom.storeMineral();
+
+	assert.strictEqual(room.memory.mineral, existingMineral);
+	assert.equal(findCalls.includes(FIND_MINERALS), false);
+});
+
+test('room memory is unchanged when no mineral is found', () => {
+	const { initRoom, room } = createInitRoomScenario();
+
+	initRoom.storeMineral();
+
+	assert.equal(room.memory.mineral, undefined);
 });
