@@ -1,58 +1,43 @@
 // TODO: Currently uses the extractor, and terminal - consider labs boosts etc and other uses for minerals
 // Revisit mineral availability, workforce demand, and mineral processing (labs, boosts and commodities).
 
+'use strict';
+
 module.exports = {
 	/**
 	 * Run Extractor Role
 	 * @param {Creep} creep
 	 */
 	run: function (creep) {
-		if (
-			creep.memory.extracting &&
-			creep.store.getCapacity() === _.sum(creep.carry)
-		) {
-			creep.memory.extracting = false;
+		const mineral = Game.getObjectById(creep.memory.mineralId);
+		const destination = Game.getObjectById(creep.memory.destinationId);
+
+		if (!mineral || !destination) {
+			console.log(`[ERROR] ${creep.name}: Invalid extractor assignment`);
+			return;
 		}
-		if (!creep.memory.extracting && _.sum(creep.carry) === 0) {
-			creep.memory.extracting = true;
-			if (creep.ticksToLive < 200) {
-				creep.suicide();
+
+		const mineralType = mineral.mineralType;
+
+		if (creep.memory.extracting) {
+			if (creep.store.getFreeCapacity() === 0) {
+				creep.memory.extracting = false;
 			}
+		} else if (creep.store.getUsedCapacity(mineralType) === 0) {
+			creep.memory.extracting = true;
 		}
 
 		if (creep.memory.extracting) {
-			let target;
+			const result = creep.harvest(mineral);
 
-			if (creep.memory.depositId) {
-				target = Game.getObjectById(creep.memory.depositId);
-			} else {
-				const targets = creep.room.find(FIND_MINERALS);
-				target = targets[0];
-				creep.memory.depositId = target.id;
-				creep.memory.mineralType = target.mineralType;
-			}
-			if (creep.harvest(target) === ERR_NOT_IN_RANGE) {
-				creep.moveTo(target);
+			if (result === ERR_NOT_IN_RANGE) {
+				creep.moveTo(mineral);
 			}
 		} else {
-			if (creep.room.terminal) {
-				if (
-					creep.transfer(
-						creep.room.terminal,
-						creep.memory.mineralType,
-					) === ERR_NOT_IN_RANGE
-				) {
-					creep.moveTo(creep.room.terminal);
-				}
-			} else if (creep.room.storage) {
-				if (
-					creep.transfer(
-						creep.room.storage,
-						creep.memory.mineralType,
-					) === ERR_NOT_IN_RANGE
-				) {
-					creep.moveTo(creep.room.storage);
-				}
+			const result = creep.transfer(destination, mineralType);
+
+			if (result === ERR_NOT_IN_RANGE) {
+				creep.moveTo(destination);
 			}
 		}
 	},
