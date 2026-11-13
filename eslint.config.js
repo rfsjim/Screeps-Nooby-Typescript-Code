@@ -12,6 +12,7 @@ module.exports = defineConfig([
 			semi: ['error', 'always'],
 			'prefer-const': 'error',
 			'no-var': 'error',
+			'no-return-assign': 'error',
 			eqeqeq: ['error', 'always'],
 			curly: ['error', 'all'],
 			yoda: ['error', 'never'],
