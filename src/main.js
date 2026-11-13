@@ -5,13 +5,15 @@ require('./prototype.terminal'); // common code for all terminals
 require('./version'); // check script version
 
 const init = require('./init'); // game init details
+const InitRoom = require('./init.room');
 const towerManager = require('./manager.tower');
 
 module.exports.loop = function () {
 	// get phase and initGame details
 	const firstSpawn = Object.values(Game.spawns)[0];
+	const room = firstSpawn.room;
 	if (firstSpawn) {
-		const phaseNumber = init.getCurrentPhaseNumber(firstSpawn.room);
+		const phaseNumber = init.getCurrentPhaseNumber(room);
 		init.initGame(phaseNumber);
 	}
 
@@ -22,8 +24,9 @@ module.exports.loop = function () {
 
 	// check for memory entries of dead creeps by iterating over Memory.creeps
 	for (const name in Memory.creeps) {
+		const creep = Game.creeps[name];
 		// and checking if the creep is still alive
-		if (Game.creeps[name] === undefined) {
+		if (creep === undefined) {
 			// if not, delete the memory entry
 			delete Memory.creeps[name];
 		}
@@ -32,7 +35,8 @@ module.exports.loop = function () {
 	// Tell the current creeps what to do - for each creeps
 	for (const name in Game.creeps) {
 		// run creep logic
-		Game.creeps[name].runRole();
+		const creep = Game.creeps[name];
+		creep.runRole();
 	}
 
 	// Coordinate towers once per room so their combined power can be considered.
@@ -48,13 +52,21 @@ module.exports.loop = function () {
 
 	// for each spawn
 	for (const spawnName in Game.spawns) {
+		const spawn = Game.spawns[spawnName];
+		const room = spawn.room;
+
+		// Discover mineral metadata once per room
+		if (!room.memory.mineral) {
+			const mineralMemory = new InitRoom(room);
+			mineralMemory.storeMineral();
+		}
+
 		// run spawn logic
-		Game.spawns[spawnName].spawnCreepsIfNecessary();
-		//console.log("Available Energy: " + Game.spawns[spawnName].room.energyAvailable + ", energy capacity: " + Game.spawns[spawnName].room.energyCapacityAvailable);
+		spawn.spawnCreepsIfNecessary();
 
 		// run terminal trades
-		if (Game.spawns[spawnName].room.terminal && Game.time % 10 === 0) {
-			Game.spawns[spawnName].room.terminal.findTrade();
+		if (room.terminal && Game.time % 10 === 0) {
+			room.terminal.findTrade();
 		}
 	}
 
@@ -76,8 +88,10 @@ module.exports.loop = function () {
 		bucket: Game.cpu.bucket,
 	};
 
-	// if (Game.cpu.bucket >= 10000)
-	// {
-	//     Game.cpu.generatePixel();
-	// }
+	if (
+		typeof Game.cpu.generatePixel === 'function' &&
+		Game.cpu.bucket >= 10000
+	) {
+		Game.cpu.generatePixel();
+	}
 };

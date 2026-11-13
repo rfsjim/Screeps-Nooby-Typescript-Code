@@ -9,10 +9,18 @@ class InitRoom {
 		this.terrain = room.getTerrain();
 	}
 
+	/**
+	 * Get Number of Sources in Room
+	 * @returns number
+	 */
 	getSources() {
 		return this.sources.length;
 	}
 
+	/**
+	 * Supplies Candidate Positions for Source Mining Containers
+	 * @returns {Map<Id<Source>, RoomPosition[]>}
+	 */
 	ensureContainers() {
 		const candidatesBySource = new Map();
 
@@ -79,25 +87,28 @@ class InitRoom {
 		return candidatesBySource;
 	}
 
-	getMineral() {
-		if (!this.room.memory.mineral) {
-			const minerals = this.room.find(FIND_MINERALS);
-			let mineral;
-
-			if (minerals.length > 0) {
-				mineral = minerals[0];
-			}
-
-			if (mineral) {
-				this.room.memory.mineral = {
-					id: mineral.id,
-					mineralType: mineral.mineralType,
-					density: mineral.density,
-					x: mineral.pos.x,
-					y: mineral.pos.y,
-				};
-			}
+	/**
+	 * Gets Information for Mineral in Room and Saves to Room Memory
+	 * @returns {void}
+	 */
+	storeMineral() {
+		if (this.room.memory.mineral) {
+			return;
 		}
+
+		const [mineral] = this.room.find(FIND_MINERALS);
+
+		if (!mineral) {
+			return;
+		}
+
+		this.room.memory.mineral = {
+			id: mineral.id,
+			mineralType: mineral.mineralType,
+			density: mineral.density,
+			x: mineral.pos.x,
+			y: mineral.pos.y,
+		};
 	}
 }
 
