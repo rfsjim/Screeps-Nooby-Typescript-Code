@@ -11,8 +11,8 @@ const towerManager = require('./manager.tower');
 module.exports.loop = function () {
 	// get phase and initGame details
 	const firstSpawn = Object.values(Game.spawns)[0];
-	const room = firstSpawn.room;
 	if (firstSpawn) {
+		const room = firstSpawn.room;
 		const phaseNumber = init.getCurrentPhaseNumber(room);
 		init.initGame(phaseNumber);
 	}
