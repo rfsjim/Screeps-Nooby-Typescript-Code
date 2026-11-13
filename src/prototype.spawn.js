@@ -580,7 +580,7 @@ StructureSpawn.prototype.createLongDistanceHarvester = function (
 };
 
 /**
- *
+ * Spawn a room claimer or reserver
  * @param {string} target
  * @param {'claim'|'reserve'} action
  */
