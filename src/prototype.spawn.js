@@ -24,10 +24,61 @@ const affordabilityPolicy = {
 	skip: 'skip',
 };
 
+/**
+ * @typedef {'wait' | 'downsize' | 'skip'} AffordabilityPolicy
+ */
+
+/**
+ * A unit of room spawn demand. Role-specific assignment fields are optional
+ * because the queue contains requests for several different creep roles.
+ * @typedef {Object} SpawnDemand
+ * @property {string} key
+ * @property {string} role
+ * @property {number} priority
+ * @property {number} minEnergy
+ * @property {number} desiredEnergy
+ * @property {number} [energyStep]
+ * @property {AffordabilityPolicy} affordability
+ * @property {number} [sequence]
+ * @property {Id<Source>} [sourceId]
+ * @property {string} [target]
+ * @property {string} [home]
+ * @property {number} [sourceIndex]
+ * @property {Id<Mineral>} [mineralId]
+ * @property {Id<StructureTerminal | StructureStorage>} [destinationId]
+ */
+
+/**
+ * @typedef {CreepMemory & {
+ *   role: 'extractor',
+ *   mineralId: Id<Mineral>,
+ *   destinationId: Id<StructureTerminal | StructureStorage>
+ * }} ExtractorCreepMemory
+ */
+
+/**
+ * @typedef {Object} SpawnAttempt
+ * @property {string | undefined} name
+ * @property {ScreepsReturnCode} result
+ */
+
+/**
+ * @typedef {Object} SpawnSchedule
+ * @property {number} tick
+ * @property {RoomSnapShot} snapshot
+ * @property {SpawnDemand[]} queue
+ */
+
 // Transient per-tick coordination. Snapshots contain live game objects and
 // therefore must never be written to persistent Screeps Memory.
+/** @type {WeakMap<Room, SpawnSchedule>} */
 const roomSpawnSchedules = new WeakMap();
 
+/**
+ * Get Spawning Memory
+ * @param {StructureSpawn} spawn
+ * @returns {CreepMemory | undefined}
+ */
 function getSpawningMemory(spawn) {
 	const name = spawn.spawning?.name;
 	if (!name) {
@@ -39,7 +90,33 @@ function getSpawningMemory(spawn) {
 }
 
 /**
+ * @typedef {Object} RoomSnapShot
+ * @property {string} roomName
+ * @property {number} tick
+ * @property {Object} energy
+ * @property {number} energy.available
+ * @property {number} energy.capacity
+ * @property {number} energy.container Container Energy
+ * @property {number} energy.storage
+ * @property {Creep[]} creeps
+ * @property {CreepMemory[]} spawningCreeps
+ * @property {Object} operationalPopulation
+ * @property {Object} committedPopulation
+ * @property {*} policy
+ * @property {Source[]} sources
+ * @property {AnyStructure[]} structures
+ * @property {AnyOwnedStructure[]} myStructures
+ * @property {StructureContainer[]} containers
+ * @property {ConstructionSite<BuildableStructureConstant>[]} constructionSites
+ * @property {Creep[]} hostiles
+ * @property {StructureSpawn[]} roomSpawns
+ * @property {number} controllerLevel
+ * @property {boolean} hasExtractor
+ * @property {boolean} hasAvailableClaimSlot
+ */
+/**
  * Capture every fact used for demand calculation once per room and tick.
+ * @returns {RoomSnapShot}
  */
 StructureSpawn.prototype.createSpawnRoomSnapshot = function () {
 	const room = this.room;
@@ -114,6 +191,11 @@ StructureSpawn.prototype.createSpawnRoomSnapshot = function () {
 	};
 };
 
+/**
+ * @param {SpawnDemand[]} queue
+ * @param {SpawnDemand} request
+ * @returns {void}
+ */
 function addDemand(queue, request) {
 	queue.push({ ...request, sequence: queue.length });
 }
@@ -212,7 +294,46 @@ function addMinerDemand(snapshot, queue) {
 	}
 }
 
-function addConfiguredRoleDemand(snapshot, queue, spawn) {
+/**
+ * Add extractor requests with their mineral and delivery assignments.
+ * @param {RoomSnapShot} snapshot
+ * @param {SpawnDemand[]} queue
+ * @param {StructureSpawn} spawn
+ * @returns {void}
+ */
+function addExtractorDemand(snapshot, queue, spawn) {
+	const destination =
+		spawn.room.terminal?.store.getFreeCapacity() > 0
+			? spawn.room.terminal
+			: spawn.room.storage;
+	const mineralId = spawn.room.memory.mineral?.id;
+	if (
+		snapshot.controllerLevel < 6 ||
+		!snapshot.hasExtractor ||
+		mineralId === undefined ||
+		destination === undefined
+	) {
+		return;
+	}
+
+	const deficit =
+		(snapshot.policy.minCreeps?.extractor ?? 0) -
+		(snapshot.committedPopulation.extractor ?? 0);
+	for (let index = 0; index < deficit; index++) {
+		addDemand(queue, {
+			key: `role-extractor-${index}`,
+			role: 'extractor',
+			priority: spawnPriority.routine,
+			minEnergy: 200,
+			desiredEnergy: snapshot.energy.capacity,
+			affordability: affordabilityPolicy.wait,
+			mineralId,
+			destinationId: destination.id,
+		});
+	}
+}
+
+function addConfiguredRoleDemand(snapshot, queue) {
 	const needsConstruction = snapshot.constructionSites.length > 0;
 	const needsRepairs = snapshot.structures.some(
 		(structure) =>
@@ -226,17 +347,12 @@ function addConfiguredRoleDemand(snapshot, queue, spawn) {
 				structure.structureType === STRUCTURE_RAMPART) &&
 			structure.hits < structure.hitsMax * 0.5,
 	);
-	const extractorReady =
-		snapshot.controllerLevel >= 6 &&
-		snapshot.hasExtractor &&
-		spawn.room.storage !== undefined &&
-		spawn.room.terminal !== undefined;
-
 	for (const role of listOfRoles) {
 		if (
 			role === 'harvester' ||
 			role === 'miner' ||
 			role === 'claimer' ||
+			role === 'extractor' ||
 			role === 'carlDouglas'
 		) {
 			continue;
@@ -248,9 +364,6 @@ function addConfiguredRoleDemand(snapshot, queue, spawn) {
 			continue;
 		}
 		if (role === 'wallRepairer' && !needsWallRepairs) {
-			continue;
-		}
-		if (role === 'extractor' && !extractorReady) {
 			continue;
 		}
 		const deficit =
@@ -328,6 +441,8 @@ function addRemoteDemand(snapshot, queue) {
 
 /**
  * Express room demand without considering currently available spawn energy.
+ * @param {RoomSnapShot} [snapshot]
+ * @returns {SpawnDemand[]}
  */
 StructureSpawn.prototype.buildSpawnQueue = function (
 	snapshot = this.createSpawnRoomSnapshot(),
@@ -336,8 +451,9 @@ StructureSpawn.prototype.buildSpawnQueue = function (
 	if (!addRecoveryDemand(snapshot, queue)) {
 		addDefenceDemand(snapshot, queue);
 		addMinerDemand(snapshot, queue);
+		addExtractorDemand(snapshot, queue, this);
 		addClaimDemand(snapshot, queue);
-		addConfiguredRoleDemand(snapshot, queue, this);
+		addConfiguredRoleDemand(snapshot, queue);
 		addRemoteDemand(snapshot, queue);
 	}
 	return queue.sort(
@@ -346,6 +462,11 @@ StructureSpawn.prototype.buildSpawnQueue = function (
 	);
 };
 
+/**
+ * @param {SpawnDemand} request
+ * @param {number} availableEnergy
+ * @returns {number | undefined}
+ */
 function affordableEnergy(request, availableEnergy) {
 	if (availableEnergy >= request.desiredEnergy) {
 		return request.desiredEnergy;
@@ -363,6 +484,11 @@ function affordableEnergy(request, availableEnergy) {
 	);
 }
 
+/**
+ * @param {SpawnDemand} request
+ * @param {number} energy
+ * @returns {SpawnAttempt}
+ */
 StructureSpawn.prototype.executeSpawnRequest = function (request, energy) {
 	if (request.role === 'miner') {
 		return this.createMiner(request.sourceId);
@@ -385,9 +511,36 @@ StructureSpawn.prototype.executeSpawnRequest = function (request, energy) {
 			request.sourceIndex,
 		);
 	}
+	if (request.role === 'extractor') {
+		return this.createExtractor(
+			energy,
+			request.mineralId,
+			request.destinationId,
+		);
+	}
 	return this.createCustomCreep(energy, request.role);
 };
 
+/**
+ * @param {number} energy
+ * @param {Id<Mineral>} mineralId
+ * @param {Id<StructureTerminal | StructureStorage>} destinationId
+ * @returns {SpawnAttempt}
+ */
+StructureSpawn.prototype.createExtractor = function (
+	energy,
+	mineralId,
+	destinationId,
+) {
+	return this.createCustomCreep(energy, 'extractor', {
+		mineralId,
+		destinationId,
+	});
+};
+
+/**
+ * @returns {SpawnSchedule}
+ */
 StructureSpawn.prototype.getSpawnSchedule = function () {
 	const existing = roomSpawnSchedules.get(this.room);
 	if (existing?.tick === Game.time) {
@@ -459,8 +612,14 @@ StructureSpawn.prototype.spawnCreepsIfNecessary = function () {
  * Function to spawn custom sized creeps
  * @param {number} energy
  * @param {string} roleName
+ * @param {Partial<CreepMemory>} [additionalMemory]
+ * @returns {SpawnAttempt}
  */
-StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
+StructureSpawn.prototype.createCustomCreep = function (
+	energy,
+	roleName,
+	additionalMemory = {},
+) {
 	// create balance creep as big as possible with the given energy
 	// min parts group is a work move carry
 	if (energy < 200) {
@@ -485,7 +644,9 @@ StructureSpawn.prototype.createCustomCreep = function (energy, roleName) {
 	}
 
 	// create a creep with created body part for the given role
-	const creepMemory = { memory: { role: roleName, working: false } };
+	const creepMemory = {
+		memory: { role: roleName, working: false, ...additionalMemory },
+	};
 	const name = createUniqueCreepName(roleName, this.name);
 
 	return {

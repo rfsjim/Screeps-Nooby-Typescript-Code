@@ -117,18 +117,22 @@ function createGrowingRoomScenario({
 	energy = 600,
 	energyCapacity = energy,
 	minCreeps = {},
+	mineralMemory = { id: 'mineral-1' },
 	spawnResults = {},
 } = {}) {
+	const room = createMockRoom({
+		creeps,
+		sources,
+		structures,
+		constructionSites,
+		controller,
+		energy,
+		energyCapacity,
+	});
+	room.memory.mineral = mineralMemory;
+
 	return createSpawnScenario({
-		room: createMockRoom({
-			creeps,
-			sources,
-			structures,
-			constructionSites,
-			controller,
-			energy,
-			energyCapacity,
-		}),
+		room,
 		minCreeps,
 		spawnResults,
 	});
@@ -972,7 +976,7 @@ test('an extractor structure is not looked for before RCL6', () => {
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
@@ -1022,7 +1026,7 @@ test('an extractor role is spawned at RCL6 with required structures', () => {
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
@@ -1041,6 +1045,12 @@ test('an extractor role is spawned at RCL6 with required structures', () => {
 		spawnAttempts.map((attempt) => attempt.role),
 		['extractor'],
 	);
+	assert.deepEqual(spawnAttempts[0].memory, {
+		role: 'extractor',
+		working: false,
+		mineralId: 'mineral-1',
+		destinationId: 'terminal-01',
+	});
 });
 
 test('an extractor role is not spawned without an extractor', () => {
@@ -1052,7 +1062,7 @@ test('an extractor role is not spawned without an extractor', () => {
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
@@ -1073,7 +1083,7 @@ test('an extractor role is not spawned without an extractor', () => {
 	);
 });
 
-test('an extractor role is not spawned without a storage', () => {
+test('an extractor role uses a terminal destination when storage is unavailable', () => {
 	const extractor = createStructure({
 		id: 'extractor-1',
 		structureType: STRUCTURE_EXTRACTOR,
@@ -1081,7 +1091,7 @@ test('an extractor role is not spawned without a storage', () => {
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
@@ -1096,13 +1106,15 @@ test('an extractor role is not spawned without a storage', () => {
 
 	spawn.spawnCreepsIfNecessary();
 
-	assert.deepEqual(
-		spawnAttempts.map((attempt) => attempt.role),
-		[],
-	);
+	assert.deepEqual(spawnAttempts[0].memory, {
+		role: 'extractor',
+		working: false,
+		mineralId: 'mineral-1',
+		destinationId: 'terminal-01',
+	});
 });
 
-test('an extractor role is not spawned without a terminal', () => {
+test('an extractor role uses storage when a terminal is unavailable', () => {
 	const extractor = createStructure({
 		id: 'extractor-1',
 		structureType: STRUCTURE_EXTRACTOR,
@@ -1125,10 +1137,61 @@ test('an extractor role is not spawned without a terminal', () => {
 
 	spawn.spawnCreepsIfNecessary();
 
-	assert.deepEqual(
-		spawnAttempts.map((attempt) => attempt.role),
-		[],
-	);
+	assert.deepEqual(spawnAttempts[0].memory, {
+		role: 'extractor',
+		working: false,
+		mineralId: 'mineral-1',
+		destinationId: 'storage-1',
+	});
+});
+
+test('an extractor role falls back to storage when the terminal is full', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+		store: { [RESOURCE_ENERGY]: 0 },
+	});
+	const terminal = createStructure({
+		id: 'terminal-01',
+		structureType: STRUCTURE_TERMINAL,
+		store: { getFreeCapacity: () => 0 },
+	});
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage, terminal],
+		controller: { my: true, level: 6 },
+		minCreeps: { extractor: 1 },
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.equal(spawnAttempts[0].memory.destinationId, 'storage-1');
+});
+
+test('an extractor role is not demanded without mineral memory', () => {
+	const extractor = createStructure({
+		id: 'extractor-1',
+		structureType: STRUCTURE_EXTRACTOR,
+	});
+	const storage = createStructure({
+		id: 'storage-1',
+		structureType: STRUCTURE_STORAGE,
+	});
+	const { spawn, spawnAttempts } = createGrowingRoomScenario({
+		creeps: createProductiveCreeps(),
+		structures: [extractor, storage],
+		controller: { my: true, level: 6 },
+		minCreeps: { extractor: 1 },
+		mineralMemory: null,
+	});
+
+	spawn.spawnCreepsIfNecessary();
+
+	assert.deepEqual(spawnAttempts, []);
 });
 
 test('an extractor role is spawned at RCL7 with required structures', () => {
@@ -1144,7 +1207,7 @@ test('an extractor role is spawned at RCL7 with required structures', () => {
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
@@ -1179,7 +1242,7 @@ test('an extractor role is not spawned at RCL7 with an unowned extractor', () =>
 	const terminal = createStructure({
 		id: 'terminal-01',
 		structureType: STRUCTURE_TERMINAL,
-		store: {},
+		store: { getFreeCapacity: () => 1000 },
 	});
 
 	const { spawn, spawnAttempts } = createGrowingRoomScenario({
