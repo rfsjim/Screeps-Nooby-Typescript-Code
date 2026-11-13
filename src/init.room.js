@@ -78,6 +78,27 @@ class InitRoom {
 
 		return candidatesBySource;
 	}
+
+	getMineral() {
+		if (!this.room.memory.mineral) {
+			const minerals = this.room.find(FIND_MINERALS);
+			let mineral;
+
+			if (minerals.length > 0) {
+				mineral = minerals[0];
+			}
+
+			if (mineral) {
+				this.room.memory.mineral = {
+					id: mineral.id,
+					mineralType: mineral.mineralType,
+					density: mineral.density,
+					x: mineral.pos.x,
+					y: mineral.pos.y,
+				};
+			}
+		}
+	}
 }
 
 module.exports = InitRoom;
