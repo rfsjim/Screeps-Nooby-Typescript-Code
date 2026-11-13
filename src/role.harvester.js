@@ -6,6 +6,7 @@ module.exports = {
 	 * @param {Creep} creep
 	 */
 	run: function (creep) {
+		creep.memory.working ??= false;
 		// if creep is bringing energy to a structure but has no energy left
 		if (
 			creep.memory.working === true &&
