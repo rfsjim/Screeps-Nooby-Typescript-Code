@@ -6,7 +6,7 @@ const { installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const roleLongDistanceHarvester = require('../src/role.longDistanceHarvester');
+const roleLongDistanceHarvester = require('../src/role/role.longDistanceHarvester');
 
 function createDeliveryStructure({
 	id = 'delivery-1',

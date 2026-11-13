@@ -6,7 +6,7 @@ const { installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const roleClaimer = require('../src/role.claimer');
+const roleClaimer = require('../src/role/role.claimer');
 
 function createClaimerScenario({
 	controllerAction = 'claim',

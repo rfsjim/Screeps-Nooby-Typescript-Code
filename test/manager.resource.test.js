@@ -9,7 +9,7 @@ const {
 
 installScreepsGlobals();
 
-const ResourceManager = require('../src/manager.resource');
+const ResourceManager = require('../src/manager/manager.resource');
 
 test('getDroppedResources returns only the requested resource type', () => {
 	const energy = {

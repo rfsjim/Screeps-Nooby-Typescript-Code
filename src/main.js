@@ -1,12 +1,11 @@
 //import modules
-require('./prototype.creep'); // common code for all creeps
-require('./prototype.spawn'); // common code for all spawns
-require('./prototype.terminal'); // common code for all terminals
-require('./version'); // check script version
+require('./prototype/prototype.creep'); // common code for all creeps
+require('./prototype/prototype.spawn'); // common code for all spawns
+require('./prototype/prototype.terminal'); // common code for all terminals
 
-const init = require('./init'); // game init details
-const InitRoom = require('./init.room');
-const towerManager = require('./manager.tower');
+const init = require('./init/init'); // game init details
+const InitRoom = require('./init/init.room'); // init room details
+const towerManager = require('./manager/manager.tower'); // common code for all towers
 
 module.exports.loop = function () {
 	// get phase and initGame details
@@ -68,11 +67,6 @@ module.exports.loop = function () {
 		if (room.terminal && Game.time % 10 === 0) {
 			room.terminal.findTrade();
 		}
-	}
-
-	if (!Memory.SCRIPT_VERSION || Memory.SCRIPT_VERSION !== SCRIPT_VERSION) {
-		Memory.SCRIPT_VERSION = SCRIPT_VERSION;
-		console.log('New code updated');
 	}
 
 	if (!Memory.stats) {

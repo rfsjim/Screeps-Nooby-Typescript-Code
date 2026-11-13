@@ -16,8 +16,8 @@ const {
 installScreepsGlobals();
 
 // Load the unchanged production prototypes after installing the Screeps API shim.
-require('../src/prototype.creep');
-require('../src/prototype.spawn');
+require('../src/prototype/prototype.creep');
+require('../src/prototype/prototype.spawn');
 
 function createSpawnScenario({
 	room,

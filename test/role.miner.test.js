@@ -11,7 +11,7 @@ const {
 
 installScreepsGlobals();
 
-const roleMiner = require('../src/role.miner');
+const roleMiner = require('../src/role/role.miner');
 
 function createMinerScenario({
 	assignedSourceId = 'source-1',

@@ -6,7 +6,7 @@ const { installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const roleCarlDouglas = require('../src/role.carlDouglas');
+const roleCarlDouglas = require('../src/role/role.carlDouglas');
 
 function createUnit({
 	activeParts = [],

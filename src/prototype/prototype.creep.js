@@ -1,15 +1,27 @@
+const roleHarvester = require('../role/role.harvester');
+const roleUpgrader = require('../role/role.upgrader');
+const roleBuilder = require('../role/role.builder');
+const roleRepairer = require('../role/role.repairer');
+const roleWallRepairer = require('../role/role.wallRepairer');
+const roleLongDistanceHarvester = require('../role/role.longDistanceHarvester');
+const roleClaimer = require('../role/role.claimer');
+const roleMiner = require('../role/role.miner');
+const roleLorry = require('../role/role.lorry');
+const roleExtractor = require('../role/role.extractor');
+const roleCarlDouglas = require('../role/role.carlDouglas');
+
 const roles = {
-	harvester: require('./role.harvester'),
-	upgrader: require('./role.upgrader'),
-	builder: require('./role.builder'),
-	repairer: require('./role.repairer'),
-	wallRepairer: require('./role.wallRepairer'),
-	longDistanceHarvester: require('./role.longDistanceHarvester'),
-	claimer: require('./role.claimer'),
-	miner: require('./role.miner'),
-	lorry: require('./role.lorry'),
-	roleExtractor: require('./role.extractor'),
-	carlDouglas: require('./role.carlDouglas'),
+	harvester: roleHarvester,
+	upgrader: roleUpgrader,
+	builder: roleBuilder,
+	repairer: roleRepairer,
+	wallRepairer: roleWallRepairer,
+	longDistanceHarvester: roleLongDistanceHarvester,
+	claimer: roleClaimer,
+	miner: roleMiner,
+	lorry: roleLorry,
+	roleExtractor,
+	carlDouglas: roleCarlDouglas,
 };
 
 /**

@@ -5,7 +5,7 @@ const { installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const MarketManager = require('../src/manager.market');
+const MarketManager = require('../src/manager/manager.market');
 
 function createPolicy(overrides = {}) {
 	return {

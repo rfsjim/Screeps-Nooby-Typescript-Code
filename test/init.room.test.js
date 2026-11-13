@@ -6,7 +6,7 @@ const { installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const InitRoom = require('../src/init.room');
+const InitRoom = require('../src/init/init.room');
 
 function positionKey(x, y) {
 	return `${x},${y}`;

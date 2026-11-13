@@ -6,7 +6,7 @@ const { createStructure, installScreepsGlobals } = require('./helpers/screeps');
 
 installScreepsGlobals();
 
-const init = require('../src/init');
+const init = require('../src/init/init');
 
 function createPhaseSource(id, adjacentStructures = []) {
 	return {

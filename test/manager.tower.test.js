@@ -15,7 +15,7 @@ Object.assign(global, {
 	TOWER_FALLOFF: 0.75,
 });
 
-const towerManager = require('../src/manager.tower');
+const towerManager = require('../src/manager/manager.tower');
 
 function position(range) {
 	return {
