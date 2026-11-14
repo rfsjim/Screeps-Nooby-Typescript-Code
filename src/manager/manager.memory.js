@@ -59,9 +59,10 @@ export function getRoomMemory(room) {
 	if (memory.maxHarvesters === undefined) {
 		memory.maxHarvesters = 0;
 	}
-	if (memory.owner === undefined) {
-		memory.owner = room.controller?.owner?.username ?? 'None';
-	} // TODO: Dynamic information can get stale
+	if (memory.owner === null) {
+		// TODO: Dynamic information can get stale
+		memory.owner = room.controller?.owner?.username ?? null;
+	}
 	if (memory.phase === undefined) {
 		memory.phase = RoomPhase.UninitiatedRoom;
 	}
