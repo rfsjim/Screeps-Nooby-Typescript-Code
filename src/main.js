@@ -54,10 +54,16 @@ module.exports.loop = function () {
 		const spawn = Game.spawns[spawnName];
 		const room = spawn.room;
 
+		const initRoom = new InitRoom(room);
+
 		// Discover mineral metadata once per room
 		if (!room.memory.mineral) {
-			const mineralMemory = new InitRoom(room);
-			mineralMemory.storeMineral();
+			initRoom.storeMineral();
+		}
+
+		// Discover Sources
+		if (!room.memory.sources) {
+			initRoom.storeSources();
 		}
 
 		// run spawn logic

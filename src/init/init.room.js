@@ -1,3 +1,5 @@
+const { getAdjacentWalkablePositionCount } = require('../helper/roomPositions');
+
 class InitRoom {
 	/**
 	 * Source and Container Position Candidate Discovery
@@ -106,9 +108,32 @@ class InitRoom {
 			id: mineral.id,
 			mineralType: mineral.mineralType,
 			density: mineral.density,
+			harvestPositions: getAdjacentWalkablePositionCount(mineral),
 			x: mineral.pos.x,
 			y: mineral.pos.y,
 		};
+	}
+
+	storeSources() {
+		if (this.room.memory.sources) {
+			return;
+		}
+
+		this.room.memory.sources = {};
+
+		const sources = this.room.find(FIND_SOURCES);
+
+		if (sources.length === 0) {
+			return;
+		}
+
+		sources.forEach((source) => {
+			this.room.memory.sources[source.id] = {
+				x: source.pos.x,
+				y: source.pos.y,
+				harvestPositions: getAdjacentWalkablePositionCount(source),
+			};
+		});
 	}
 }
 
