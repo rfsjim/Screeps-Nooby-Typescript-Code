@@ -47,6 +47,9 @@
  * a flood fill can then verify whether that barrier actually isolates the intended area under movement rules.
  */
 
+// import { ConstructionTask } from "types";
+// import { getRoomMemory } from "./memoryManager";
+
 const FULL_BUNKER_DISTANCE_REQUIRED = 7;
 
 // TODO: Build Plan implementation treats counts as cumulative totals
