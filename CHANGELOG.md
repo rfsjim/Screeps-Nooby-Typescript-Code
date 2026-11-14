@@ -35,6 +35,15 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Feat: Basic scafolding for a tower manager, no code fleshing out ideas
 - Feat: Tower Manager to Co-Ordinate Attack Heal and Repair
 - Feat: Expand Tower Logic to cover edge cases - add documentation and tests around tower logic
+- Feat: Carl Douglas Room Defender
+- Feat: Home Base Defenders Spawn Logic
+- Feat: Add Spawn Manager
+- Feat: Mineral Detection in Room Init
+- Feat: Wire Mineral Room Memory Init and Gracefull Handle Generating Pixels outside of Screeps World
+- Feat: Wire Mineral Room Memory Init and Gracefull Handle Generating Pixels outside of Screeps World
+- Feat: Add spawn logic for extractor role
+- Feat: Add helpers for future tasking and target capability assessments
+- Feat: Add helper getters
 ### Fixed
 
 - Fix: Fixed premature access to Game.spawns['Spawn1'].room
@@ -63,3 +72,6 @@ All notable changes to the Screeps Colony Automation will be documented in this 
 - Fix: Init bug fixes and logical areas
 - Fix: Fix Error where CPU statistics initialization throws on a clean memory state
 - Fix: Error in taget logic accepting null targets
+- Fix: Update Builder Logic
+- Fix: Fix logic for home base defenders Carl Douglas
+- Fix: Remove references to console.error() as it isn't supplied in API

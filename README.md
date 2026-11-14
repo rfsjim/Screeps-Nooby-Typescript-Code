@@ -13,7 +13,7 @@ I selected [thPion's code](https://github.com/thPion/Screeps-Nooby-Guide) as a f
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/rfsjim/Screeps-Nooby-Typescript-Code/development/colony-v2)
 ![Build](https://github.com/rfsjim/Screeps-Nooby-Typescript-Code/actions/workflows/ci.yml/badge.svg?branch=development/colony-v2)
 
-Updating the codebase using a known stable baseline.
+Colony v2 is implemented in JavaScript with JSDoc type annotations. It is updating the codebase using a known stable baseline. Legacy TypeScript modules are retained as reference material during the migration. Functionality is selectively reimplemented and tested rather than translated directly. A TypeScript migration may be reconsidered once Colony v2 becomes the sole authoritative implementation.
 
 - [CHANGELOG](./CHANGELOG.md)
 - [CODE OF CONDUCT](./CODE_OF_CONDUCT.md)
