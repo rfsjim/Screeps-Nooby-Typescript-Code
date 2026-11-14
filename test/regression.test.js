@@ -61,6 +61,14 @@ test('the main loop discovers mineral metadata once for a room with multiple spa
 			return { get: () => 0 };
 		},
 	};
+	mineral.room = room;
+	global.RoomPosition = class RoomPosition {
+		constructor(x, y, roomName) {
+			this.x = x;
+			this.y = y;
+			this.roomName = roomName;
+		}
+	};
 	const createSpawn = (name) => ({
 		name,
 		room,
@@ -97,6 +105,7 @@ test('the main loop discovers mineral metadata once for a room with multiple spa
 		id: 'mineral-1',
 		mineralType: RESOURCE_ZYNTHIUM,
 		density: 4,
+		harvestPositions: 8,
 		x: 12,
 		y: 34,
 	});

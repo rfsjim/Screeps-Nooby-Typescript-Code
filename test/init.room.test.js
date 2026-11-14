@@ -21,6 +21,7 @@ function createSource(id, x, y) {
 
 function createInitRoomScenario({
 	mineralMemory,
+	sourceMemory,
 	minerals = [],
 	sources = [createSource('source-1', 25, 25)],
 	walls = [],
@@ -51,7 +52,7 @@ function createInitRoomScenario({
 
 	const room = {
 		name: 'W1N1',
-		memory: { mineral: mineralMemory },
+		memory: { mineral: mineralMemory, sources: sourceMemory },
 		find(type) {
 			findCalls.push(type);
 			if (type === FIND_SOURCES) {
@@ -72,6 +73,10 @@ function createInitRoomScenario({
 			};
 		},
 	};
+
+	for (const roomObject of [...sources, ...minerals]) {
+		roomObject.room = room;
+	}
 
 	return { findCalls, initRoom: new InitRoom(room), room };
 }
@@ -222,9 +227,57 @@ test('mineral metadata is saved to room memory', () => {
 		id: 'mineral-1',
 		mineralType: RESOURCE_HYDROGEN,
 		density: 3,
+		harvestPositions: 8,
 		x: 17,
 		y: 29,
 	});
+});
+
+test('sources are stored by ID with coordinates and harvest positions', () => {
+	const sources = [
+		createSource('source-1', 10, 10),
+		createSource('source-2', 20, 20),
+	];
+	const { initRoom, room } = createInitRoomScenario({
+		sources,
+		walls: [
+			[9, 9],
+			[10, 9],
+			[11, 9],
+		],
+	});
+
+	initRoom.storeSources();
+
+	assert.deepEqual(room.memory.sources, {
+		'source-1': { x: 10, y: 10, harvestPositions: 5 },
+		'source-2': { x: 20, y: 20, harvestPositions: 8 },
+	});
+});
+
+test('existing source memory is preserved without searching the room again', () => {
+	const existingSources = {
+		'known-source': { x: 4, y: 7, harvestPositions: 6 },
+	};
+	const { findCalls, initRoom, room } = createInitRoomScenario({
+		sourceMemory: existingSources,
+	});
+	const searchesBeforeStore = findCalls.length;
+
+	initRoom.storeSources();
+
+	assert.strictEqual(room.memory.sources, existingSources);
+	assert.equal(findCalls.length, searchesBeforeStore);
+});
+
+test('repeated source initialisation does not repeat the room search', () => {
+	const { findCalls, initRoom } = createInitRoomScenario();
+
+	initRoom.storeSources();
+	const searchesAfterInitialisation = findCalls.length;
+	initRoom.storeSources();
+
+	assert.equal(findCalls.length, searchesAfterInitialisation);
 });
 
 test('existing mineral memory is preserved without searching the room again', () => {
