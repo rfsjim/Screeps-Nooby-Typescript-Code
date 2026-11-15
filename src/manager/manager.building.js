@@ -47,8 +47,8 @@
  * a flood fill can then verify whether that barrier actually isolates the intended area under movement rules.
  */
 
-// import { ConstructionTask } from "types";
-// import { getRoomMemory } from "./memoryManager";
+const { getRoomMemory } = require('./manager.memory');
+const { getAdjacentWalkablePositions } = require('../helper/roomPositions');
 
 const FULL_BUNKER_DISTANCE_REQUIRED = 7;
 
@@ -364,11 +364,11 @@ function dependenciesMet(room, dependencies) {
 
 /**
  * Plan Extension Positions
- * @param {Room} room
- * @param {number} count
+ * @param {Room} room - Room Object for Extensions
+ * @param {number} desiredExtensionCount - Number of Required Extensions
  * @returns {RoomPosition[]} Array of RoomPositions for extensions
  */
-function planExtensionPositions(room, count) {
+function planExtensionPositions(room, desiredExtensionCount) {
 	// TODO: extension placement is calculated separately, using an anchor chosen from the controller's
 	// horizontal position relative to the spawn
 	// the chosen extension anchor doesn't depend on which candidate bunker position passed the clearance test.
@@ -445,7 +445,7 @@ function planExtensionPositions(room, count) {
 					room.name,
 				);
 				roomPositions.push(pos);
-				if (roomPositions.length >= count) {
+				if (roomPositions.length >= desiredExtensionCount) {
 					return roomPositions;
 				} // stop when we have enough positions
 			}
@@ -466,60 +466,143 @@ function planExtensionPositions(room, count) {
 
 /**
  * Plan Container Positions
- * @param {Room} room
- * @param {number} count
+ * One container position per source, choosing the cheapest valid
+ * candidate first, until desiredContainerCount positions are selected.
+ *
+ * @param {Room} room - Room Object for Containers
+ * @param {number} desiredContainerCount - Desired Number of Containers
  * @returns {RoomPosition[]} Room Position for Containers
  */
-function planContainerPositions(room, count) {
+export function planContainerPositions(room, desiredContainerCount) {
 	// TODO Replace placement algorithm
-	const positions = [];
 	const roomMemory = getRoomMemory(room);
-	if (!room.controller) {
-		return positions;
-	} // room has no controller
-
-	if (!roomMemory.spawns) {
-		return positions;
-	} // if room has no spawn then we dont need to be building
-
-	const initialSpawn = Object.keys(roomMemory.spawns)[0]; // get first spawn created in room as anchor for bunker
-	if (!initialSpawn) {
-		return positions;
+	if (!room.controller || !roomMemory.spawns) {
+		// Room has no controller or no spawn
+		return [];
 	}
 
-	const spawnMemory = roomMemory.spawns[initialSpawn]; // get room memory details
-	if (!spawnMemory) {
-		return positions;
-	}
-	const sources = Object.keys(roomMemory.sources || {}).map(
-		(sourceId) => (Game.getObjectById < Source) > sourceId,
+	// Get saved Spawn Id or room spawn if none exist in memory
+	const spawn = Object.values(Game.spawns).find(
+		(s) => s.room.name === room.name,
 	);
-	// TODO Incorrectly ignores one source rooms
-	if (sources.length >= 2) {
-		for (const source of sources) {
-			if (!source) {
-				continue;
-			} // skip if source is undefined
 
-			// TODO offsets contains: { x: 0, y: 0 } the source's own position,
-			// no container can be built on the source
-			// uses the same five-position cross pattern intended for extensions,
-			// rather than examining the actual walkable neighbouring terrain.
-			// getAdjacentWalkablePositions() helper is conceptually relevant here
-			for (const { x, y } of offsets) {
-				const pos = new RoomPosition(
-					source.pos.x + x,
-					source.pos.y + y,
-					room.name,
-				);
-				positions.push(pos);
-				if (positions.length >= count) {
-					return positions;
-				} // stop when we have enough positions
+	if (!spawn) {
+		return [];
+	}
+
+	const candidates = [];
+
+	const sources = roomMemory.sources || {};
+
+	/** @type {Id<Source>} */
+	let sourceId;
+
+	const costMatrix = makeStructureCostMatrix(room);
+
+	for (sourceId of Object.keys(sources)) {
+		const source = Game.getObjectById(sourceId);
+		if (!source) {
+			continue;
+		}
+
+		const sourceContainerStructure = source.pos.findInRange(
+			FIND_STRUCTURES,
+			1,
+			{
+				filter: { structureType: STRUCTURE_CONTAINER },
+			},
+		);
+		const sourceContainerSites = source.pos.findInRange(
+			FIND_CONSTRUCTION_SITES,
+			1,
+			{
+				filter: { structureType: STRUCTURE_CONTAINER },
+			},
+		);
+
+		const alreadyServiced =
+			sourceContainerStructure.length > 0 ||
+			sourceContainerSites.length > 0;
+
+		if (alreadyServiced) {
+			continue;
+		}
+
+		for (const pos of getAdjacentWalkablePositions(source)) {
+			if (pos.getRangeTo(spawn.pos) <= 1) {
+				continue;
 			}
+
+			const structures = pos.lookFor(LOOK_STRUCTURES);
+			const sites = pos.lookFor(LOOK_CONSTRUCTION_SITES);
+
+			const blockedByStructure = structures.some(
+				(s) =>
+					s.structureType !== STRUCTURE_ROAD &&
+					s.structureType !== STRUCTURE_RAMPART,
+			);
+			const blockedBySite = sites.some(
+				(s) =>
+					s.structureType !== STRUCTURE_ROAD &&
+					s.structureType !== STRUCTURE_RAMPART,
+			);
+
+			if (blockedByStructure || blockedBySite) {
+				continue;
+			}
+
+			const result = PathFinder.search(
+				spawn.pos,
+				{
+					pos: pos,
+					range: 0,
+				},
+				{
+					plainCost: 1,
+					swampCost: 5,
+					maxRooms: 1,
+
+					roomCallback(roomName) {
+						if (roomName !== room.name) {
+							return false;
+						}
+
+						return costMatrix;
+					},
+				},
+			);
+
+			if (result.incomplete) {
+				continue;
+			}
+
+			candidates.push({
+				sourceId,
+				pos,
+				cost: result.cost,
+			});
 		}
 	}
-	return positions;
+
+	// Lowest path cost first
+	candidates.sort((a, b) => a.cost - b.cost);
+
+	const selected = [];
+	const selectedSourceIds = new Set();
+
+	for (const candidate of candidates) {
+		if (selected.length >= desiredContainerCount) {
+			break;
+		}
+		if (selectedSourceIds.has(candidate.sourceId)) {
+			continue;
+		}
+
+		selected.push(candidate);
+		selectedSourceIds.add(candidate.sourceId);
+	}
+
+	return selected.map((candidate) => candidate.pos);
 }
 
 /**
@@ -660,4 +743,41 @@ function scanSites(room, positions) {
 			);
 		}
 	}
+}
+
+/**
+ * Make Cost Matrix for Structures and Construction Sites
+ * @param {Room} room
+ * @returns {CostMatrix}
+ */
+export function makeStructureCostMatrix(room) {
+	const costs = new PathFinder.CostMatrix();
+
+	const blockingStructures = room.find(FIND_STRUCTURES, {
+		filter: (structure) =>
+			structure.structureType !== STRUCTURE_ROAD &&
+			structure.structureType !== STRUCTURE_CONTAINER &&
+			!(
+				structure.structureType === STRUCTURE_RAMPART &&
+				(structure.my || structure.isPublic)
+			),
+	});
+
+	const roads = room.find(FIND_STRUCTURES, {
+		filter: (structure) => structure.structureType === STRUCTURE_ROAD,
+	});
+
+	for (const structure of blockingStructures) {
+		costs.set(structure.pos.x, structure.pos.y, 255);
+	}
+
+	for (const road of roads) {
+		costs.set(road.pos.x, road.pos.y, 1);
+	}
+
+	for (const site of room.find(FIND_CONSTRUCTION_SITES)) {
+		costs.set(site.pos.x, site.pos.y, 255);
+	}
+
+	return costs;
 }

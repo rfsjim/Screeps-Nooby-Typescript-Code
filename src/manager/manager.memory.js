@@ -8,8 +8,6 @@
  * memory initialisation, memory access, and colony state interpretation.
  */
 
-// import { RoomMemory, CreepMemory, Role, EnergyMinerMemory, RoomPhase} from "types";
-
 /**
  * Clear Controller Progress for testing purposes
  * @param {Room} room
@@ -30,57 +28,13 @@ export function resetControllerProgress(room) {
  * @param {Room} room
  * @returns {RoomMemory}
  */
-export function getRoomMemory(room) {
+function getRoomMemory(room) {
 	// TODO: Currently guarantees that various memory properties exist before returning them
 	// there's an important distinction between reading memory and initialising memory
 	// As a getter it shouldn't be doing both
 	// Useful concept; initialisation side effects need reconsideration
-	if (!room.memory) {
-		room.memory = {};
-	}
 
-	const memory = room.memory;
-
-	if (memory.constructionSites === undefined) {
-		memory.constructionSites = {};
-	}
-	if (memory.constructionQueue === undefined) {
-		memory.constructionQueue = [];
-	}
-	if (!memory.controllerProgress) {
-		memory.controllerProgress = { level: 0, totalEnergyHarvested: 0 };
-	}
-	if (memory.creepCounts === undefined) {
-		memory.creepCounts = {};
-	}
-	if (memory.creeps === undefined) {
-		memory.creeps = {};
-	}
-	if (memory.maxHarvesters === undefined) {
-		memory.maxHarvesters = 0;
-	}
-	if (memory.owner === null) {
-		// TODO: Dynamic information can get stale
-		memory.owner = room.controller?.owner?.username ?? null;
-	}
-	if (memory.phase === undefined) {
-		memory.phase = RoomPhase.UninitiatedRoom;
-	}
-	if (memory.rcl === undefined) {
-		memory.rcl = room.controller?.level ?? -1;
-	}
-	if (memory.spawns === undefined) {
-		memory.spawns = {};
-	}
-	if (memory.sources === undefined) {
-		memory.sources = {};
-	} // TODO: This has the potential to make init room memory not fire
-	if (memory.mineral === undefined) {
-		memory.mineral = {};
-	} // TODO: This has the potential to make init room memory not fire
-	// TODO: retain the idea of centralised initialisation but
-	// be careful about using property existence to represent discovery completion
-	return memory;
+	return room.memory;
 }
 
 /**
@@ -131,29 +85,6 @@ export function getInitialEnergyMinerMemory(sourceId) {
 		working: false,
 		sourceId: sourceId,
 	};
-}
-
-/**
- * Superseded by newer source metadata
- * Gets Number of Source Location[s] in room
- * Can be used to calculate max number of creeps per room
- * @deprecated init.room performs same function no longer required in memory manager.
- * @param {Room} room
- * @returns {number}
- */
-export function getNumberOfSourceLocations(room) {
-	// TODO: Superseded by newer source metadata
-	const roomMemory = getRoomMemory(room);
-	if (!roomMemory) {
-		return 0;
-	}
-	let harvestPositions = 0;
-
-	for (const sourceID in roomMemory.sources) {
-		harvestPositions += roomMemory.sources[sourceID].harvestPositions;
-	}
-
-	return harvestPositions;
 }
 
 /**
@@ -242,3 +173,5 @@ export function getRoomPhase(room) {
 
 	return phase;
 }
+
+module.exports = { getRoomMemory };
