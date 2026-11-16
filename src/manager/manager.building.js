@@ -475,13 +475,10 @@ function planExtensionPositions(room, desiredExtensionCount) {
  */
 export function planContainerPositions(room, desiredContainerCount) {
 	// TODO Replace placement algorithm
-	const roomMemory = getRoomMemory(room);
-	if (!room.controller || !roomMemory.spawns) {
-		// Room has no controller or no spawn
+	if (desiredContainerCount < 1 || !room.controller) {
 		return [];
 	}
 
-	// Get saved Spawn Id or room spawn if none exist in memory
 	const spawn = Object.values(Game.spawns).find(
 		(s) => s.room.name === room.name,
 	);
@@ -489,6 +486,8 @@ export function planContainerPositions(room, desiredContainerCount) {
 	if (!spawn) {
 		return [];
 	}
+
+	const roomMemory = getRoomMemory(room);
 
 	const candidates = [];
 
@@ -767,12 +766,12 @@ export function makeStructureCostMatrix(room) {
 		filter: (structure) => structure.structureType === STRUCTURE_ROAD,
 	});
 
-	for (const structure of blockingStructures) {
-		costs.set(structure.pos.x, structure.pos.y, 255);
-	}
-
 	for (const road of roads) {
 		costs.set(road.pos.x, road.pos.y, 1);
+	}
+
+	for (const structure of blockingStructures) {
+		costs.set(structure.pos.x, structure.pos.y, 255);
 	}
 
 	for (const site of room.find(FIND_CONSTRUCTION_SITES)) {

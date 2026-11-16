@@ -82,8 +82,13 @@ function createRoom({ structures = [], sites = [], memory = {} } = {}) {
 		controller: { my: true },
 		memory,
 		find(type, options = {}) {
-			const values = type === FIND_STRUCTURES ? structures : sites;
-			return applyFindFilter(values, options.filter);
+			if (type === FIND_STRUCTURES) {
+				return applyFindFilter(structures, options.filter);
+			}
+			if (type === FIND_CONSTRUCTION_SITES) {
+				return applyFindFilter(sites, options.filter);
+			}
+			throw new Error(`Unexpected room.find type: ${type}`);
 		},
 		getTerrain() {
 			return { get: () => 0 };
@@ -118,9 +123,10 @@ test('makeStructureCostMatrix assigns costs by structure traversability', () => 
 	assert.equal(costs.get(15, 10), 255);
 });
 
-test('makeStructureCostMatrix blocks every construction site', () => {
+test('makeStructureCostMatrix lets construction sites override road costs', () => {
 	global.PathFinder = { CostMatrix };
 	const room = createRoom({
+		structures: [structure(STRUCTURE_ROAD, 21, 20)],
 		sites: [
 			structure(STRUCTURE_EXTENSION, 20, 20),
 			structure(STRUCTURE_ROAD, 21, 20),
@@ -143,11 +149,16 @@ function installPlanningGlobals({
 	occupied = {},
 } = {}) {
 	const incompletePositions = new Set(incomplete);
-	let suppliedMatrix;
+	const searchCalls = [];
 	global.PathFinder = {
 		CostMatrix,
 		search(_origin, goal, options) {
-			suppliedMatrix = options.roomCallback('W1N1');
+			searchCalls.push({
+				goal,
+				options,
+				matrix: options.roomCallback('W1N1'),
+				otherRoomResult: options.roomCallback('W2N2'),
+			});
 			const key = positionKey(goal.pos.x, goal.pos.y);
 			return {
 				cost: pathCosts[key] ?? 50,
@@ -171,12 +182,16 @@ function installPlanningGlobals({
 
 		lookFor(type) {
 			const contents = occupied[positionKey(this.x, this.y)] ?? {};
-			return type === LOOK_STRUCTURES
-				? (contents.structures ?? [])
-				: (contents.sites ?? []);
+			if (type === LOOK_STRUCTURES) {
+				return contents.structures ?? [];
+			}
+			if (type === LOOK_CONSTRUCTION_SITES) {
+				return contents.sites ?? [];
+			}
+			throw new Error(`Unexpected position.lookFor type: ${type}`);
 		}
 	};
-	return () => suppliedMatrix;
+	return searchCalls;
 }
 
 function createSource(
@@ -192,14 +207,24 @@ function createSource(
 		pos: {
 			x,
 			y,
-			findInRange(type) {
+			findInRange(type, range, options) {
+				assert.equal(range, 1);
+				assert.deepEqual(options, {
+					filter: { structureType: STRUCTURE_CONTAINER },
+				});
 				if (type === FIND_STRUCTURES && servicedByStructure) {
 					return [structure(STRUCTURE_CONTAINER, x + 1, y)];
 				}
 				if (type === FIND_CONSTRUCTION_SITES && servicedBySite) {
 					return [structure(STRUCTURE_CONTAINER, x + 1, y)];
 				}
-				return [];
+				if (
+					type === FIND_STRUCTURES ||
+					type === FIND_CONSTRUCTION_SITES
+				) {
+					return [];
+				}
+				throw new Error(`Unexpected findInRange type: ${type}`);
 			},
 		},
 	};
@@ -210,6 +235,7 @@ test('planContainerPositions returns no positions without required room or spawn
 	global.Game = { spawns: {}, getObjectById: () => null };
 	const room = createRoom();
 
+	assert.deepEqual(planContainerPositions(room, 0), []);
 	assert.deepEqual(planContainerPositions(room, 2), []);
 
 	room.memory.spawns = { remembered: {} };
@@ -220,7 +246,7 @@ test('planContainerPositions returns no positions without required room or spawn
 });
 
 test('planContainerPositions chooses the cheapest valid candidate for each source', () => {
-	const getSuppliedMatrix = installPlanningGlobals({
+	const searchCalls = installPlanningGlobals({
 		pathCosts: {
 			[positionKey(9, 10)]: 8,
 			[positionKey(11, 10)]: 3,
@@ -264,11 +290,66 @@ test('planContainerPositions chooses the cheapest valid candidate for each sourc
 			[11, 10],
 		],
 	);
-	assert.ok(getSuppliedMatrix() instanceof CostMatrix);
+	assert.ok(searchCalls.length > 1);
+	for (const { goal, options, matrix, otherRoomResult } of searchCalls) {
+		assert.equal(goal.range, 0);
+		assert.equal(options.maxRooms, 1);
+		assert.ok(matrix instanceof CostMatrix);
+		assert.equal(otherRoomResult, false);
+	}
+	assert.equal(new Set(searchCalls.map(({ matrix }) => matrix)).size, 1);
+});
+
+test('planContainerPositions excludes candidates adjacent to the spawn', () => {
+	const searchCalls = installPlanningGlobals({
+		pathCosts: {
+			[positionKey(6, 5)]: 0,
+			[positionKey(7, 4)]: 2,
+			[positionKey(7, 6)]: 4,
+			[positionKey(8, 4)]: 5,
+			[positionKey(8, 5)]: 6,
+			[positionKey(8, 6)]: 7,
+		},
+	});
+	const room = createRoom({
+		memory: {
+			spawns: { 'spawn-1': {} },
+			sources: { 'source-1': {} },
+		},
+	});
+	const spawn = { room, pos: { x: 5, y: 5 } };
+	const source = createSource('source-1', 7, 5, room);
+	global.Game = {
+		spawns: { Spawn1: spawn },
+		getObjectById: () => source,
+	};
+
+	const positions = planContainerPositions(room, 1);
+
+	assert.deepEqual(
+		positions.map(({ x, y }) => [x, y]),
+		[[7, 4]],
+	);
+	assert.equal(
+		searchCalls.some(({ goal }) => goal.pos.x === 6 && goal.pos.y === 5),
+		false,
+	);
+	assert.deepEqual(
+		searchCalls
+			.map(({ goal }) => positionKey(goal.pos.x, goal.pos.y))
+			.sort(),
+		[
+			positionKey(7, 4),
+			positionKey(7, 6),
+			positionKey(8, 4),
+			positionKey(8, 5),
+			positionKey(8, 6),
+		].sort(),
+	);
 });
 
 test('planContainerPositions ignores serviced sources and respects the desired count', () => {
-	installPlanningGlobals({
+	const searchCalls = installPlanningGlobals({
 		pathCosts: {
 			[positionKey(11, 10)]: 1,
 			[positionKey(31, 30)]: 2,
@@ -277,13 +358,21 @@ test('planContainerPositions ignores serviced sources and respects the desired c
 	const room = createRoom({
 		memory: {
 			spawns: { 'spawn-1': {} },
-			sources: { serviced: {}, available: {}, extra: {} },
+			sources: {
+				servicedBySite: {},
+				servicedByStructure: {},
+				available: {},
+				extra: {},
+			},
 		},
 	});
 	const spawn = { room, pos: { x: 5, y: 5 } };
 	const sources = {
-		serviced: createSource('serviced', 20, 20, room, {
+		servicedBySite: createSource('servicedBySite', 20, 20, room, {
 			servicedBySite: true,
+		}),
+		servicedByStructure: createSource('servicedByStructure', 40, 40, room, {
+			servicedByStructure: true,
 		}),
 		available: createSource('available', 10, 10, room),
 		extra: createSource('extra', 30, 30, room),
@@ -299,4 +388,12 @@ test('planContainerPositions ignores serviced sources and respects the desired c
 
 	assert.equal(positions.length, 1);
 	assert.deepEqual([positions[0].x, positions[0].y], [11, 10]);
+	assert.equal(
+		searchCalls.some(
+			({ goal }) =>
+				goal.pos.getRangeTo({ x: 20, y: 20 }) <= 1 ||
+				goal.pos.getRangeTo({ x: 40, y: 40 }) <= 1,
+		),
+		false,
+	);
 });
