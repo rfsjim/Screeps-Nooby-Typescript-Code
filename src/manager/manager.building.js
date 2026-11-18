@@ -538,12 +538,15 @@ export function planContainerPositions(room, desiredContainerCount) {
 			const blockedByStructure = structures.some(
 				(s) =>
 					s.structureType !== STRUCTURE_ROAD &&
-					s.structureType !== STRUCTURE_RAMPART,
+					!(
+						s.structureType === STRUCTURE_RAMPART &&
+						(s.my || s.isPublic)
+					),
 			);
 			const blockedBySite = sites.some(
 				(s) =>
 					s.structureType !== STRUCTURE_ROAD &&
-					s.structureType !== STRUCTURE_RAMPART,
+					!(s.structureType === STRUCTURE_RAMPART && s.my),
 			);
 
 			if (blockedByStructure || blockedBySite) {
