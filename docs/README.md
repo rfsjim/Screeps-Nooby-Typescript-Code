@@ -304,3 +304,19 @@ For tie-breaking over equal net value, prefer a lower transaction energy, then a
 - [slowmotionghost - Remote Mining Guide](https://github.com/screeps/docs/pull/60/changes)
 - [Screepspl.us Wiki - Combat Guide](https://wiki.screepspl.us/Combat/)
 - [Screepspl.us Wiki - Maturity Matrix](https://wiki.screepspl.us/Maturity_Matrix/)
+
+## Design Ideas
+![Bunker Layout](/assets/bunker-layout.png)
+Bunker Layout Idea
+
+![Controller v Spawn - Controller to the left](/assets/controller-left-spawn.png)
+Controller to the left of spawn
+
+![Controller v Spawn - Controller to the right](/assets/controller-right-spawn.png)
+Controller to the right of spawn
+
+![Controller V Spawn - Equal x positions](/assets/controller-spawn-equal.png)
+Controller and spawn equal x positions
+
+![Distance transform](/assets/distance-transform.png)
+Distance transform visual
