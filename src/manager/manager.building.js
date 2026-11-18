@@ -49,6 +49,7 @@
 
 const { getRoomMemory } = require('./manager.memory');
 const { getAdjacentWalkablePositions } = require('../helper/roomPositions');
+const { getDistanceTransform } = require('../helper/roomTerrain');
 
 const FULL_BUNKER_DISTANCE_REQUIRED = 7;
 
@@ -104,8 +105,8 @@ const buildPlan = {
 // full sized bunker centre position relative to spawn
 const positions = [
 	{ x: -2, y: 0 }, // left of spawn
-	{ x: 0, y: 2 }, // right of spawn
-	{ x: 2, y: 0 }, // below the spawn
+	{ x: 0, y: 2 }, // below the spawn
+	{ x: 2, y: 0 }, // right of spawn
 ];
 
 // extension offsets relative to extension anchor
@@ -379,27 +380,23 @@ function planExtensionPositions(room, desiredExtensionCount) {
 	// the clearance check is for the proposed bunker centre,
 	// not for the individual extension positions.
 	// Retain bunker-planning concept
+	// a layout-planning problem
+
+	if (desiredExtensionCount < 1 || !room.controller) {
+		return [];
+	}
+
 	const roomPositions = [];
-	const roomMemory = getRoomMemory(room);
-	if (!room.controller) {
-		return roomPositions;
-	} // room has no controller
 
-	if (!roomMemory.spawns) {
-		return roomPositions;
-	} // if room has no spawn then we dont need to be building
+	const spawn = Object.values(Game.spawns).find(
+		(s) => s.room.name === room.name,
+	);
 
-	const initialSpawn = Object.keys(roomMemory.spawns)[0]; // get first spawn created in room as anchor for bunker
-	if (!initialSpawn) {
-		return roomPositions;
+	if (!spawn) {
+		return [];
 	}
 
-	const spawnMemory = roomMemory.spawns[initialSpawn]; // get room memory details
-	if (!spawnMemory) {
-		return roomPositions;
-	}
-
-	const spawnPos = new RoomPosition(spawnMemory.x, spawnMemory.y, room.name);
+	const spawnPos = new RoomPosition(spawn.pos.x, spawn.pos.y, room.name);
 	const controller = room.controller;
 
 	// TODO: a mismatch in the implementation this calculates candidates
@@ -411,7 +408,7 @@ function planExtensionPositions(room, desiredExtensionCount) {
 		);
 
 		if (
-			global.getDistanceTransform(room.name).get(testPos.x, testPos.y) >=
+			getDistanceTransform(room.name).get(testPos.x, testPos.y) >=
 			FULL_BUNKER_DISTANCE_REQUIRED
 		) {
 			// create extension anchor relative to controller & spawn position
@@ -455,10 +452,6 @@ function planExtensionPositions(room, desiredExtensionCount) {
 			// based on the spawn and controller positions.
 			// the distance-transform check and
 			// the extension placement aren't necessarily evaluating the same footprint.
-			roomMemory.bunker = {
-				centre: { x: testPos.x, y: testPos.y },
-				planned: false,
-			};
 		}
 	}
 	return roomPositions;
@@ -474,7 +467,7 @@ function planExtensionPositions(room, desiredExtensionCount) {
  * @returns {RoomPosition[]} Room Position for Containers
  */
 export function planContainerPositions(room, desiredContainerCount) {
-	// TODO Replace placement algorithm
+	// a position-selection problem
 	if (desiredContainerCount < 1 || !room.controller) {
 		return [];
 	}

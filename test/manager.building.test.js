@@ -39,6 +39,9 @@ function loadBuildingManager() {
 		if (request === '../helper/roomPositions') {
 			return require('../src/helper/roomPositions');
 		}
+		if (request === '../helper/roomTerrain') {
+			return require('../src/helper/roomTerrain');
+		}
 		return require(request);
 	};
 	evaluate(module, module.exports, isolatedRequire);
