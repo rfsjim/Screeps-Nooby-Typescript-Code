@@ -45,8 +45,11 @@ function loadBuildingManager() {
 	return module.exports;
 }
 
-const { planContainerPositions, makeStructureCostMatrix } =
-	loadBuildingManager();
+const {
+	planContainerPositions,
+	makeStructureCostMatrix,
+	placeConstructionSite,
+} = loadBuildingManager();
 
 class CostMatrix {
 	constructor() {
@@ -99,6 +102,39 @@ function createRoom({ structures = [], sites = [], memory = {} } = {}) {
 function structure(structureType, x, y, properties = {}) {
 	return { structureType, pos: { x, y }, ...properties };
 }
+
+test('placeConstructionSite creates the requested structure and returns OK', (t) => {
+	const log = t.mock.method(console, 'log', () => {});
+	const requestedTypes = [];
+	const position = {
+		createConstructionSite(structureType) {
+			requestedTypes.push(structureType);
+			return OK;
+		},
+	};
+
+	const result = placeConstructionSite(position, STRUCTURE_CONTAINER);
+
+	assert.equal(result, OK);
+	assert.deepEqual(requestedTypes, [STRUCTURE_CONTAINER]);
+	assert.equal(log.mock.callCount(), 0);
+});
+
+test('placeConstructionSite returns and logs a failed placement result', (t) => {
+	const log = t.mock.method(console, 'log', () => {});
+	const position = {
+		createConstructionSite: () => ERR_INVALID_TARGET,
+		toString: () => '[room W1N1 pos 12,34]',
+	};
+
+	const result = placeConstructionSite(position, STRUCTURE_TOWER);
+
+	assert.equal(result, ERR_INVALID_TARGET);
+	assert.equal(log.mock.callCount(), 1);
+	assert.deepEqual(log.mock.calls[0].arguments, [
+		`Failed to place ${STRUCTURE_TOWER} at ${position}: ${ERR_INVALID_TARGET}`,
+	]);
+});
 
 test('makeStructureCostMatrix assigns costs by structure traversability', () => {
 	global.PathFinder = { CostMatrix };

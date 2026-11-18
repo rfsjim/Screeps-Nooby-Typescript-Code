@@ -613,25 +613,18 @@ export function planContainerPositions(room, desiredContainerCount) {
  * @param {RoomPosition} roomPosition
  * @param {BuildableStructureConstant} structureType
  * @param {string} roomName
- * @returns {ScreepReturnConstant}
+ * @returns {ScreepsReturnCode}
  */
-function placeConstructionSite(roomPosition, structureType, roomName) {
-	// TODO : Straightforward reusable wrapper
-	const roomMemory = getRoomMemory(Game.rooms[roomName]);
-	if (!roomMemory) {
-		return ERR_INVALID_ARGS;
-	}
-
+export function placeConstructionSite(roomPosition, structureType) {
 	const result = roomPosition.createConstructionSite(structureType);
 
 	if (result !== OK) {
 		console.log(
 			`Failed to place ${structureType} at ${roomPosition}: ${result}`,
 		);
-		return result;
 	}
 
-	return OK;
+	return result;
 }
 
 /**
