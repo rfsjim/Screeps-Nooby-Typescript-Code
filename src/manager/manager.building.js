@@ -118,6 +118,21 @@ const offsets = [
 	{ x: 1, y: 0 }, // right
 ];
 
+// eslint-disable-next-line no-unused-vars
+const bunkerStamp = {
+	spawn: [],
+	extension: [],
+	tower: [],
+	lab: [],
+	storage: [],
+	terminal: [],
+	link: [],
+	nuker: [],
+	powerSpawn: [],
+	observer: [],
+	road: [],
+};
+
 /**
  * Building Manager
  * Handles building tasks in the room
